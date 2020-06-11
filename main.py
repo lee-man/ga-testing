@@ -35,7 +35,7 @@ def train(epoch):
     total = 0
     for batch_idx, inputs in enumerate(train_loader):
         if args.cuda:
-            data, target = data.cuda(), target.cuda()
+            inputs = inputs.cuda()
         optimizer.zero_grad()
 
         # process the weights including binarization
@@ -68,7 +68,7 @@ def test(evaluate=False):
     bin_op.binarization()
     for inputs in test_loader:
         if args.cuda:
-            data, target = data.cuda(), target.cuda()
+            inputs = inputs.cuda()
         outputs = model(inputs)
         test_loss += criterion(output, target).data.item()
         correct += inputs.eq(outputs).sum()/inputs.size(1).item()
