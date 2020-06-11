@@ -83,5 +83,5 @@ class FCAutoEncoder(nn.Module):
     def forward(self, x):
         x = self.encoder(x)
         x = self.decoder(x)
-        x = BinActive.apply(x)
+        # x = BinActive.apply(x)
         return x
