@@ -142,8 +142,8 @@ if __name__=='__main__':
     prob_sc = [0.2, 0.8]
     train_samples = np.random.choice(state_sc, size=(size_training, len_sc), p=prob_sc)
     test_samples = np.random.choice(state_sc, size=(size_testing, len_sc), p=prob_sc)
-    train_dataset = torch.utils.data.TensorDataset(torch.from_numpy(train_samples))
-    test_dataset = torch.utils.data.TensorDataset(torch.from_numpy(test_samples))
+    train_dataset = torch.utils.data.TensorDataset(torch.from_numpy(train_samples).double())
+    test_dataset = torch.utils.data.TensorDataset(torch.from_numpy(test_samples).double())
     
     # load data
     kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
