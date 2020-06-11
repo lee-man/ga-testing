@@ -9,22 +9,22 @@ class BinOp():
             if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
                 count_targets = count_targets + 1
 
-        start_range = 1
-        end_range = count_targets-2
-        self.bin_range = numpy.linspace(start_range,
-                end_range, end_range-start_range+1)\
-                        .astype('int').tolist()
-        self.num_of_params = len(self.bin_range)
+        # start_range = 1
+        # end_range = count_targets-2
+        # self.bin_range = numpy.linspace(start_range,
+        #         end_range, end_range-start_range+1)\
+        #                 .astype('int').tolist()
+        self.num_of_params = count_targets
         self.saved_params = []
         self.target_modules = []
-        index = -1
+        # index = -1
         for m in model.modules():
             if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
-                index = index + 1
-                if index in self.bin_range:
-                    tmp = m.weight.data.clone()
-                    self.saved_params.append(tmp)
-                    self.target_modules.append(m.weight)
+                # index = index + 1
+                # if index in self.bin_range:
+                tmp = m.weight.data.clone()
+                self.saved_params.append(tmp)
+                self.target_modules.append(m.weight)
         return
 
     def binarization(self):
