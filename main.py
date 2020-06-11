@@ -70,7 +70,7 @@ def test(evaluate=False):
         if args.cuda:
             inputs = inputs.cuda()
         outputs = model(inputs)
-        test_loss += criterion(outputs, target).data.item()
+        test_loss += criterion(inputs, outputs).item()
         correct += inputs.eq(outputs).sum().item()/inputs.size(1)
 
     bin_op.restore()

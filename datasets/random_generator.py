@@ -22,8 +22,8 @@ prob_sc = [0.2, 0.8]
 np.random.seed(0)
 
 # generate training dataset
-train_dataset = np.choice(state_sc, size=(size_training, len_sc), p=prob_sc)
-test_dataset = np.choice(state_sc, size=(size_testing, len_sc), p=prob_sc)
+train_dataset = np.random.choice(state_sc, size=(size_training, len_sc), p=prob_sc)
+test_dataset = np.random.schoice(state_sc, size=(size_testing, len_sc), p=prob_sc)
 
 np.save('train.npy', train_dataset)
 np.save('test.npy', test_dataset)
