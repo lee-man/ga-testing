@@ -140,8 +140,8 @@ if __name__=='__main__':
     len_sc = 1000
     state_sc = [1., -1.]
     prob_sc = [0.2, 0.8]
-    train_samples = np.choice(state_sc, size=(size_training, len_sc), p=prob_sc)
-    test_samples = np.choice(state_sc, size=(size_testing, len_sc), p=prob_sc)
+    train_samples = np.random.choice(state_sc, size=(size_training, len_sc), p=prob_sc)
+    test_samples = np.random.choice(state_sc, size=(size_testing, len_sc), p=prob_sc)
     train_dataset = torch.utils.data.TensorDataset(torch.from_numpy(train_samples))
     test_dataset = torch.utils.data.TensorDataset(torch.from_numpy(test_samples))
     
