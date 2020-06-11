@@ -183,7 +183,7 @@ if __name__=='__main__':
     optimizer = optim.Adam(model.parameters(), lr=args.lr,
             weight_decay=args.weight_decay)
 
-    criterion = nn.MSELoss()
+    criterion = nn.L1Loss()
 
     # define the binarization operator
     bin_op = util.BinOp(model)
