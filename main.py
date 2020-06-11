@@ -154,7 +154,7 @@ if __name__=='__main__':
     
     # generate the model
     if args.arch == 'fc_ae':
-        model = models.fc_ae.FCAutoEncoder()
+        model = models.FCAutoEncoder()
     else:
         print('ERROR: specified arch is not suppported')
         exit()
