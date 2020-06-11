@@ -33,9 +33,7 @@ def train(epoch):
     model.train()
     correct = 0
     total = 0
-    for batch_idx, inputs in enumerate(train_loader):
-        print(inputs)
-        exit()
+    for batch_idx, (inputs, ) in enumerate(train_loader):
         if args.cuda:
             inputs = inputs.cuda()
         optimizer.zero_grad()
@@ -68,7 +66,7 @@ def test(evaluate=False):
     correct = 0
 
     bin_op.binarization()
-    for inputs in test_loader:
+    for (inputs, ) in test_loader:
         if args.cuda:
             inputs = inputs.cuda()
         outputs = model(inputs)
