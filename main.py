@@ -6,7 +6,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import os
 import sys
-import models
+from models.fc_ae import FCAutoEncoder
 import util
 from torchvision import datasets, transforms
 
@@ -154,7 +154,7 @@ if __name__=='__main__':
     
     # generate the model
     if args.arch == 'fc_ae':
-        model = models.FCAutoEncoder()
+        model = FCAutoEncoder()
     else:
         print('ERROR: specified arch is not suppported')
         exit()
