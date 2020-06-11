@@ -52,7 +52,7 @@ def train(epoch):
         optimizer.step()
 
         total += inputs.size(0)
-        correct += inputs.eq(outputs).sum().item()/inputs.size(1)
+        correct += inputs.eq(outputs.sign()).sum().item()/inputs.size(1)
         if batch_idx % args.log_interval == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f} | Acc: {:.3f}'.format(
                 epoch, batch_idx * len(inputs), len(train_loader.dataset),
@@ -71,7 +71,7 @@ def test(evaluate=False):
             inputs = inputs.cuda()
         outputs = model(inputs)
         test_loss += criterion(inputs, outputs).item()
-        correct += inputs.eq(outputs).sum().item()/inputs.size(1)
+        correct += inputs.eq(outputs.sign()).sum().item()/inputs.size(1)
 
     bin_op.restore()
     
