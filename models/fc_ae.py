@@ -50,7 +50,7 @@ class BinConv2d(nn.Module): # change the name of BinConv2d
             # else:
             #     self.bn = nn.BatchNorm1d(input_channels, eps=1e-4, momentum=0.1, affine=True)
             self.linear = nn.Linear(input_channels, output_channels)
-        self.relu = nn.ReLU(inplace=True)
+        # self.relu = nn.ReLU(inplace=True)
     
     def forward(self, x):
         # x = self.bn(x)
@@ -63,7 +63,7 @@ class BinConv2d(nn.Module): # change the name of BinConv2d
             if self.previous_conv:
                 x = x.view(x.size(0), self.input_channels)
             x = self.linear(x)
-        x = self.relu(x)
+        # x = self.relu(x)
         return x
 
 class FCAutoEncoder(nn.Module):
@@ -77,7 +77,8 @@ class FCAutoEncoder(nn.Module):
         self.decoder = nn.Sequential(
             BinConv2d(100, 250, Linear=True),
             BinConv2d(250, 500, Linear=True),
-            nn.Linear(500, 1000))
+            # nn.Linear(500, 1000))
+            BinConv2d(250, 1000, Linear=True))
 
     def forward(self, x):
         x = self.encoder(x)

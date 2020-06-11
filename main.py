@@ -106,7 +106,7 @@ if __name__=='__main__':
             help='number of epochs to train (default: 60)')
     parser.add_argument('--lr-epochs', type=int, default=15, metavar='N',
             help='number of epochs to decay the lr (default: 15)')
-    parser.add_argument('--lr', type=float, default=0.01, metavar='LR',
+    parser.add_argument('--lr', type=float, default=0.00001, metavar='LR',
             help='learning rate (default: 0.01)')
     parser.add_argument('--momentum', type=float, default=0.9, metavar='M',
             help='SGD momentum (default: 0.9)')
@@ -183,7 +183,7 @@ if __name__=='__main__':
     optimizer = optim.Adam(model.parameters(), lr=args.lr,
             weight_decay=args.weight_decay)
 
-    criterion = nn.L1Loss()
+    criterion = nn.MSELoss()
 
     # define the binarization operator
     bin_op = util.BinOp(model)
