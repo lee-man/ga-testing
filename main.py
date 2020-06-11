@@ -34,6 +34,8 @@ def train(epoch):
     correct = 0
     total = 0
     for batch_idx, inputs in enumerate(train_loader):
+        print(inputs)
+        exit()
         if args.cuda:
             inputs = inputs.cuda()
         optimizer.zero_grad()
