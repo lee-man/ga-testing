@@ -6,14 +6,14 @@ class BinActive(torch.autograd.Function):
     '''
     Binarize the input activations and calculate the mean across channel dimension.
     '''
-    @staticmethod
+    # @staticmethod
     def forward(self, input):
         self.save_for_backward(input)
         size = input.size()
         input = input.sign()
         return input
 
-    @staticmethod
+    # @staticmethod
     def backward(self, grad_output):
         input, = self.saved_tensors
         grad_input = grad_output.clone()
@@ -54,7 +54,7 @@ class BinConv2d(nn.Module): # change the name of BinConv2d
     
     def forward(self, x):
         # x = self.bn(x)
-        x = BinActive()(x)
+        x = BinActive.apply(x)
         if self.dropout_ratio!=0:
             x = self.dropout(x)
         if not self.Linear:
@@ -82,5 +82,5 @@ class FCAutoEncoder(nn.Module):
     def forward(self, x):
         x = self.encoder(x)
         x = self.decoder(x)
-        x = BinActive()(x)
+        x = BinActive.apply(x)
         return x
