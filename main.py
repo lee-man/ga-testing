@@ -72,7 +72,7 @@ def test(evaluate=False):
         outputs = model(inputs)
         test_loss += criterion(inputs, outputs).item()
         correct += inputs.eq(outputs.sign()).sum().item()/inputs.size(1)
-
+    print(outputs)
     bin_op.restore()
     
     acc = 100. * float(correct) / len(test_loader.dataset)
