@@ -25,13 +25,13 @@ def save_state(model, acc):
 def correct_calculate(inputs, outputs):
     mask = inputs.eq(1)
     count_inputs = (inputs * mask).sum(dim=1)
-    count_outputs = (outputs * mask).sum(dim=1)
+    count_outputs = (outputs.sign() * mask).sum(dim=1)
     correct = count_inputs.eq(count_outputs).sum().item()
     
     return correct
 
 def onepercent_calculate(outputs):
-    count = (outputs.eq(1)).sum().item()
+    count = (outputs.sign().eq(1)).sum().item()
 
     return count/outputs.size(1)
     
