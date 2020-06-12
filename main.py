@@ -50,10 +50,11 @@ def train(epoch):
         bin_op.binarization()
 
         outputs = model(inputs)
-        mask = inputs.eq(1).float()
-        loss = criterion(outputs*mask, inputs*mask)
-        mask = inputs.eq(-1).float()
-        loss += 1. * criterion(outputs*mask, inputs*mask)
+        loss = criterion(outputs, inputs)
+        # mask = inputs.eq(1).float()
+        # loss = criterion(outputs*mask, inputs*mask)
+        # mask = inputs.eq(-1).float()
+        # loss += criterion(outputs*mask, inputs*mask)
         loss.backward()
 
         # restore weights
@@ -85,11 +86,11 @@ def test(evaluate=False):
         if args.cuda:
             inputs = inputs.cuda()
         outputs = model(inputs)
-        # test_loss += criterion(inputs, outputs).item()
-        mask = inputs.eq(1).float()
-        test_loss += criterion(outputs*mask, inputs*mask)
-        mask = inputs.eq(-1).float()
-        test_loss += 1. * criterion(outputs*mask, inputs*mask)
+        test_loss += criterion(inputs, outputs).item()
+        # mask = inputs.eq(1).float()
+        # test_loss += criterion(outputs*mask, inputs*mask)
+        # mask = inputs.eq(-1).float()
+        # test_loss += criterion(outputs*mask, inputs*mask)
         # correct += inputs.eq(outputs.sign()).sum().item()/inputs.size(1)
         # correct += inputs.eq(outputs.gt(0)).sum().item()/inputs.size(1)
         correct += correct_calculate(inputs, outputs)
