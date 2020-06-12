@@ -50,11 +50,11 @@ def train(epoch):
         bin_op.binarization()
 
         outputs = model(inputs)
-        loss = criterion(outputs, inputs)
-        # mask = inputs.eq(1).float()
-        # loss = criterion(outputs*mask, inputs*mask)
-        # mask = inputs.eq(-1).float()
-        # loss += criterion(outputs*mask, inputs*mask)
+        # loss = criterion(outputs, inputs)
+        mask = inputs.eq(1).float()
+        loss = criterion(outputs*mask, inputs*mask)
+        mask = inputs.eq(-1).float()
+        loss += 0.5 * criterion(outputs*mask, inputs*mask)
         loss.backward()
 
         # restore weights
@@ -87,10 +87,10 @@ def test(evaluate=False):
             inputs = inputs.cuda()
         outputs = model(inputs)
         test_loss += criterion(inputs, outputs).item()
-        # mask = inputs.eq(1).float()
-        # test_loss += criterion(outputs*mask, inputs*mask)
-        # mask = inputs.eq(-1).float()
-        # test_loss += criterion(outputs*mask, inputs*mask)
+        mask = inputs.eq(1).float()
+        test_loss += criterion(outputs*mask, inputs*mask)
+        mask = inputs.eq(-1).float()
+        test_loss += criterion(outputs*mask, inputs*mask)
         # correct += inputs.eq(outputs.sign()).sum().item()/inputs.size(1)
         # correct += inputs.eq(outputs.gt(0)).sum().item()/inputs.size(1)
         correct += correct_calculate(inputs, outputs)
@@ -161,7 +161,7 @@ if __name__=='__main__':
     size_training = 10000
     size_testing = 1000
     len_sc = 1000
-    state_sc = [1., 0.]
+    state_sc = [1., -1.]
     prob_sc = [0.2, 0.8]
     train_samples = np.random.choice(state_sc, size=(size_training, len_sc), p=prob_sc)
     test_samples = np.random.choice(state_sc, size=(size_testing, len_sc), p=prob_sc)
