@@ -40,6 +40,7 @@ def train(epoch):
     model.train()
     correct = 0
     total = 0
+    onepercent = 0
     for batch_idx, (inputs, ) in enumerate(train_loader):
         if args.cuda:
             inputs = inputs.cuda()
@@ -75,6 +76,7 @@ def test(evaluate=False):
     model.eval()
     test_loss = 0
     correct = 0
+    onepercent = 0
 
     bin_op.binarization()
     for (inputs, ) in test_loader:
