@@ -50,7 +50,6 @@ def train(epoch):
         bin_op.binarization()
 
         outputs = model(inputs)
-        # loss = criterion(outputs, inputs)
         mask = inputs.eq(1).float()
         loss = criterion(outputs*mask, inputs*mask)
         mask = inputs.eq(-1).float()
@@ -64,8 +63,6 @@ def train(epoch):
         optimizer.step()
 
         total += inputs.size(0)
-        # correct += inputs.eq(outputs.sign()).sum().item()/inputs.size(1)
-        # correct += inputs.eq(outputs.gt(0)).sum().item()/inputs.size(1)
         correct += correct_calculate(inputs, outputs)
         onepercent += onepercent_calculate(outputs)
         if batch_idx % args.log_interval == 0:
@@ -91,8 +88,6 @@ def test(evaluate=False):
         test_loss += criterion(outputs*mask, inputs*mask)
         mask = inputs.eq(-1).float()
         test_loss += 0.25 * criterion(outputs*mask, inputs*mask)
-        # correct += inputs.eq(outputs.sign()).sum().item()/inputs.size(1)
-        # correct += inputs.eq(outputs.gt(0)).sum().item()/inputs.size(1)
         correct += correct_calculate(inputs, outputs)
         onepercent += onepercent_calculate(outputs)
 
@@ -193,23 +188,13 @@ if __name__=='__main__':
         model.cuda()
     
     print(model)
-    # param_dict = dict(model.named_parameters())
-    # params = []
     
-    base_lr = 0.1
-    
-    # for key, value in param_dict.items():
-    #     params += [{'params':[value], 'lr': args.lr,
-    #         'weight_decay': args.weight_decay,
-    #         'key':key}]
     
     optimizer = optim.Adam(model.parameters(), lr=args.lr,
             weight_decay=args.weight_decay)
     # optimizer = optim.SGD(model.parameters(), lr=args.lr)
 
     criterion = nn.L1Loss()
-    # pos_weight = torch.ones([1000]).cuda() * 4
-    # criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
     # define the binarization operator
     bin_op = util.BinOp(model)
