@@ -52,8 +52,8 @@ def train(epoch):
         optimizer.step()
 
         total += inputs.size(0)
-        # correct += inputs.eq(outputs.sign()).sum().item()/inputs.size(1)
-        correct += inputs.eq(outputs.gt(0)).sum().item()/inputs.size(1)
+        correct += inputs.eq(outputs.sign()).sum().item()/inputs.size(1)
+        # correct += inputs.eq(outputs.gt(0)).sum().item()/inputs.size(1)
         if batch_idx % args.log_interval == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f} | Acc: {:.3f}'.format(
                 epoch, batch_idx * len(inputs), len(train_loader.dataset),
@@ -72,8 +72,8 @@ def test(evaluate=False):
             inputs = inputs.cuda()
         outputs = model(inputs)
         test_loss += criterion(inputs, outputs).item()
-        # correct += inputs.eq(outputs.sign()).sum().item()/inputs.size(1)
-        correct += inputs.eq(outputs.gt(0)).sum().item()/inputs.size(1)
+        correct += inputs.eq(outputs.sign()).sum().item()/inputs.size(1)
+        # correct += inputs.eq(outputs.gt(0)).sum().item()/inputs.size(1)
     print(outputs)
     bin_op.restore()
     
@@ -108,7 +108,7 @@ if __name__=='__main__':
             help='number of epochs to train (default: 60)')
     parser.add_argument('--lr-epochs', type=int, default=15, metavar='N',
             help='number of epochs to decay the lr (default: 15)')
-    parser.add_argument('--lr', type=float, default=0.1, metavar='LR',
+    parser.add_argument('--lr', type=float, default=0.0001, metavar='LR',
             help='learning rate (default: 0.01)')
     parser.add_argument('--momentum', type=float, default=0.9, metavar='M',
             help='SGD momentum (default: 0.9)')
@@ -182,13 +182,13 @@ if __name__=='__main__':
     #         'weight_decay': args.weight_decay,
     #         'key':key}]
     
-    # optimizer = optim.Adam(model.parameters(), lr=args.lr,
-    #         weight_decay=args.weight_decay)
-    optimizer = optim.SGD(model.parameters(), lr=args.lr)
+    optimizer = optim.Adam(model.parameters(), lr=args.lr,
+            weight_decay=args.weight_decay)
+    # optimizer = optim.SGD(model.parameters(), lr=args.lr)
 
-    # criterion = nn.L1Loss()
-    pos_weight = torch.ones([1000]).cuda() * 4
-    criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
+    criterion = nn.L1Loss()
+    # pos_weight = torch.ones([1000]).cuda() * 4
+    # criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
     # define the binarization operator
     bin_op = util.BinOp(model)
