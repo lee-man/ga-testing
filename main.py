@@ -22,11 +22,18 @@ def save_state(model, acc):
                     state['state_dict'].pop(key)
     torch.save(state, 'models/'+args.arch+'.best.pth.tar')
 
-# def correct_calculate(inputs, outputs):
-#     inputs = (inputs + 1) / 2
-#     outputs = (outputs + 1) / 2
-#     equal = inputs.eq(outputs).float() * inputs
+def correct_calculate(inputs, outputs):
+    mask = inputs.eq(1)
+    count_inputs = (inputs * mask).sum(dim=1)
+    count_outputs = (outputs * mask).sum(dim=1)
+    correct = count_inputs.eq(count_outputs).sum().item()
+    
+    return correct
 
+def onepercent_calculate(outputs):
+    count = (outputs.eq(1)).sum().item()
+
+    return count/outputs.size(1)
     
 
 def train(epoch):
@@ -42,7 +49,8 @@ def train(epoch):
         bin_op.binarization()
 
         outputs = model(inputs)
-        loss = criterion(outputs, inputs)
+        mask = inputs.eq(1).float()
+        loss = criterion(outputs*mask, inputs*mask)
         loss.backward()
 
         # restore weights
@@ -52,12 +60,14 @@ def train(epoch):
         optimizer.step()
 
         total += inputs.size(0)
-        correct += inputs.eq(outputs.sign()).sum().item()/inputs.size(1)
+        # correct += inputs.eq(outputs.sign()).sum().item()/inputs.size(1)
         # correct += inputs.eq(outputs.gt(0)).sum().item()/inputs.size(1)
+        correct += correct_calculate(inputs, outputs)
+        onepercent += onepercent_calculate(outputs)
         if batch_idx % args.log_interval == 0:
-            print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f} | Acc: {:.3f}'.format(
+            print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f} | Acc: {:.3f} | OneP: {:.3f}'.format(
                 epoch, batch_idx * len(inputs), len(train_loader.dataset),
-                100. * batch_idx / len(train_loader), loss.data.item(), 100.*correct/total))
+                100. * batch_idx / len(train_loader), loss.data.item(), 100.*correct/total, 100.*onepercent/total))
     return
 
 def test(evaluate=False):
@@ -71,9 +81,13 @@ def test(evaluate=False):
         if args.cuda:
             inputs = inputs.cuda()
         outputs = model(inputs)
-        test_loss += criterion(inputs, outputs).item()
-        correct += inputs.eq(outputs.sign()).sum().item()/inputs.size(1)
+        # test_loss += criterion(inputs, outputs).item()
+        test_loss = criterion(outputs*mask, inputs*mask)
+        # correct += inputs.eq(outputs.sign()).sum().item()/inputs.size(1)
         # correct += inputs.eq(outputs.gt(0)).sum().item()/inputs.size(1)
+        correct += correct_calculate(inputs, outputs)
+        onepercent += onepercent_calculate(outputs)
+
     print(outputs)
     bin_op.restore()
     
@@ -84,9 +98,8 @@ def test(evaluate=False):
             save_state(model, best_acc)
 
     test_loss /= len(test_loader.dataset)
-    print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)'.format(
-        test_loss * args.batch_size, correct, len(test_loader.dataset),
-        100. * float(correct) / len(test_loader.dataset)))
+    print('\nTest set: Average loss: {:.4f}, Accuracy: {:.2f}%, OneP: {:.2f}%'.format(
+        test_loss * args.batch_size, 100. * float(correct) / len(test_loader.dataset), 100. * onepercent / len(test_loader.dataset)))
     print('Best Accuracy: {:.2f}%\n'.format(best_acc))
 
 def adjust_learning_rate(optimizer, epoch):
