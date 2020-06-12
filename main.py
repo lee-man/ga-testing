@@ -186,7 +186,7 @@ if __name__=='__main__':
             weight_decay=args.weight_decay)
 
     # criterion = nn.L1Loss()
-    pos_weight = torch.ones([1000]) * 4
+    pos_weight = torch.ones([1000]).cuda() * 4
     criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
     # define the binarization operator
