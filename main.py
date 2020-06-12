@@ -54,7 +54,7 @@ def train(epoch):
         mask = inputs.eq(1).float()
         loss = criterion(outputs*mask, inputs*mask)
         mask = inputs.eq(-1).float()
-        loss += 0.3 * criterion(outputs*mask, inputs*mask)
+        loss += 0.25* criterion(outputs*mask, inputs*mask)
         loss.backward()
 
         # restore weights
@@ -90,7 +90,7 @@ def test(evaluate=False):
         mask = inputs.eq(1).float()
         test_loss += criterion(outputs*mask, inputs*mask)
         mask = inputs.eq(-1).float()
-        test_loss += 0.3 * criterion(outputs*mask, inputs*mask)
+        test_loss += 0.25 * criterion(outputs*mask, inputs*mask)
         # correct += inputs.eq(outputs.sign()).sum().item()/inputs.size(1)
         # correct += inputs.eq(outputs.gt(0)).sum().item()/inputs.size(1)
         correct += correct_calculate(inputs, outputs)
