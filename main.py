@@ -52,7 +52,8 @@ def train(epoch):
         optimizer.step()
 
         total += inputs.size(0)
-        correct += inputs.eq(outputs.sign()).sum().item()/inputs.size(1)
+        # correct += inputs.eq(outputs.sign()).sum().item()/inputs.size(1)
+        correct += inputs.eq(outputs.gt(0)).sum().item()/inputs.size(1)
         if batch_idx % args.log_interval == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f} | Acc: {:.3f}'.format(
                 epoch, batch_idx * len(inputs), len(train_loader.dataset),
@@ -71,7 +72,8 @@ def test(evaluate=False):
             inputs = inputs.cuda()
         outputs = model(inputs)
         test_loss += criterion(inputs, outputs).item()
-        correct += inputs.eq(outputs.sign()).sum().item()/inputs.size(1)
+        # correct += inputs.eq(outputs.sign()).sum().item()/inputs.size(1)
+        correct += inputs.eq(outputs.gt(0)).sum().item()/inputs.size(1)
     print(outputs)
     bin_op.restore()
     
@@ -138,7 +140,7 @@ if __name__=='__main__':
     size_training = 10000
     size_testing = 1000
     len_sc = 1000
-    state_sc = [1., -1.]
+    state_sc = [1., 0.]
     prob_sc = [0.2, 0.8]
     train_samples = np.random.choice(state_sc, size=(size_training, len_sc), p=prob_sc)
     test_samples = np.random.choice(state_sc, size=(size_testing, len_sc), p=prob_sc)
@@ -183,7 +185,9 @@ if __name__=='__main__':
     optimizer = optim.Adam(model.parameters(), lr=args.lr,
             weight_decay=args.weight_decay)
 
-    criterion = nn.L1Loss()
+    # criterion = nn.L1Loss()
+    pos_weight = torch.ones([10000]) * 4
+    criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
     # define the binarization operator
     bin_op = util.BinOp(model)
