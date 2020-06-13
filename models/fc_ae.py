@@ -70,14 +70,14 @@ class FCAutoEncoder(nn.Module):
     def __init__(self):
         super(FCAutoEncoder, self).__init__()
         self.encoder = nn.Sequential(
-            BinConv2d(1000, 500, Linear=True),
-            BinConv2d(500, 250, Linear=True),
-            BinConv2d(250, 100, Linear=True))
+            BinConv2d(1000, 750, Linear=True),
+            BinConv2d(750, 500, Linear=True),
+            BinConv2d(500, 250, Linear=True))
 
         self.decoder = nn.Sequential(
-            BinConv2d(100, 250, Linear=True),
             BinConv2d(250, 500, Linear=True),
-            nn.Linear(500, 1000))
+            BinConv2d(500, 750, Linear=True),
+            nn.Linear(750, 1000))
             # BinConv2d(500, 1000, Linear=True))
 
     def forward(self, x):
