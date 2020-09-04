@@ -9,6 +9,9 @@ import sys
 from models.fc_ae import FCAutoEncoder
 import util
 from torchvision import datasets, transforms
+import logging
+logging.basicConfig(level=logging.INFO)
+
 
 def save_state(model, acc):
     print('==> Saving model ...')

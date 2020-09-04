@@ -67,18 +67,17 @@ class BinConv2d(nn.Module): # change the name of BinConv2d
         return x
 
 class FCAutoEncoder(nn.Module):
-    def __init__(self):
+    def __init__(self, dim_input, dim_latent):
         super(FCAutoEncoder, self).__init__()
         self.encoder = nn.Sequential(
-            BinConv2d(1000, 500, Linear=True),
-            BinConv2d(500, 250, Linear=True),
-            BinConv2d(250, 100, Linear=True))
+            BinConv2d(dim_input, int(dim_input/2), Linear=True),
+            BinConv2d(int(dim_input/2), dim_latent, Linear=True))
+            # BinConv2d(250, 100, Linear=True))
 
         self.decoder = nn.Sequential(
-            BinConv2d(100, 250, Linear=True),
-            BinConv2d(250, 500, Linear=True),
-            nn.Linear(500, 1000))
-            # BinConv2d(500, 1000, Linear=True))
+            BinConv2d(dim_latent, int(dim_input/2), Linear=True),
+            BinConv2d(int(dim_input/2), dim_input, Linear=True))
+            # nn.Linear(500, 1000))
 
     def forward(self, x):
         x = self.encoder(x)
