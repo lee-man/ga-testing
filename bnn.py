@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-# from torch.utils.tensorboard import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 import os
 import sys
 import csv
@@ -81,7 +81,7 @@ class BNNAutoEncoder(object):
         self.seed = seed
         self._get_device()
         self._set_random_seed()
-        # self.writer = SummaryWriter('runs')
+        self.writer = SummaryWriter('runs')
         
         # Traininig dataset and its loader
         self.train_dataset = torch.utils.data.TensorDataset(torch.from_numpy(self.mlb).float())
@@ -162,8 +162,8 @@ class BNNAutoEncoder(object):
                 correct += self.correct_calculate(inputs, outputs)
                 onepercent += self.onepercent_calculate(outputs)
 
-                # self.writer.add_scalar('loss', loss, n_iter)
-                # self.writer.add_scalar('ones', self.onepercent_calculate(outputs), n_iter)
+                self.writer.add_scalar('loss', loss, n_iter)
+                self.writer.add_scalar('ones', self.onepercent_calculate(outputs), n_iter)
                 n_iter += 1
 
                 util.progress_bar(batch_idx, len(self.train_loader), 'Loss: {:.6f} | Acc: {:.3f} | OneP: {:.3f}'\
