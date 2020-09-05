@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from torch.utils.tensorboard import SummaryWriter
 import os
 import sys
 import csv
@@ -13,7 +14,8 @@ from torchvision import datasets, transforms
 import logging
 logging.basicConfig(level=logging.INFO)
 
-
+import matplotlib.pyplot as plt
+plt.switch_backend('agg')
 
 def create_mlb(num_id=338):
     ###########################
@@ -71,7 +73,7 @@ class BNNAutoEncoder(object):
     Remaining problems:
     The operataions should be totally bit-wise, without floating operation.
     '''
-    def __init__(self, mlb_path='data/mlb.npy', num_ctrl=37, num_sc=338, arch='fc_ae', epoches=60, batch_size=128, lr=0.0001, wd=1e-5, seed=0):
+    def __init__(self, mlb_path='data/mlb.npy', num_ctrl=37, num_sc=338, arch='fc_ae', epoches=100, batch_size=128, lr=0.01, wd=1e-5, seed=0):
         self.mlb = np.load(mlb_path)
         self.num_ctrl = num_ctrl
         self.num_sc = num_sc
@@ -79,6 +81,7 @@ class BNNAutoEncoder(object):
         self.seed = seed
         self._get_device()
         self._set_random_seed()
+        self.writer = SummaryWriter('runs')
         
         # Traininig dataset and its loader
         self.train_dataset = torch.utils.data.TensorDataset(torch.from_numpy(self.mlb).float())
@@ -126,6 +129,7 @@ class BNNAutoEncoder(object):
     def train(self):
         best_acc = 0
         logging.info('Start Training...')
+        n_iter = 0
         for epoch in range(self.epoches):
             logging.info('\nEpoch {}:'.format(epoch))
             self.model.train()
@@ -134,18 +138,20 @@ class BNNAutoEncoder(object):
             onepercent = 0
             for batch_idx, (inputs, ) in enumerate(self.train_loader):
                 inputs = inputs.to(self.device)
+
                 self.optimizer.zero_grad()
 
                 # process the weights including binarization
                 self.bin_op.binarization()
 
                 outputs = self.model(inputs)
+
                 mask = inputs.eq(1).float()
                 loss = self.criterion(outputs*mask, inputs*mask)
                 mask = inputs.eq(-1).float()
-                loss += 0.25 * self.criterion(outputs*mask, inputs*mask)
+                loss += 0.02 * self.criterion(outputs*mask, inputs*mask)
                 loss.backward()
-
+                
                 # restore weights
                 self.bin_op.restore()
                 self.bin_op.updateBinaryGradWeight()
@@ -155,6 +161,10 @@ class BNNAutoEncoder(object):
                 total += inputs.size(0)
                 correct += self.correct_calculate(inputs, outputs)
                 onepercent += self.onepercent_calculate(outputs)
+
+                self.writer.add_scalar('loss', loss, n_iter)
+                self.writer.add_scalar('ones', self.onepercent_calculate(outputs), n_iter)
+                n_iter += 1
 
                 util.progress_bar(batch_idx, len(self.train_loader), 'Loss: {:.6f} | Acc: {:.3f} | OneP: {:.3f}'\
                     .format(loss, 100.*correct/total, 100.*onepercent/total))
@@ -172,6 +182,53 @@ class BNNAutoEncoder(object):
                     os.mkdir('checkpoint')
                 torch.save(state, './checkpoint/ckpt.pth')
             logging.info('Best accuracy: {}'.format(best_acc))                   
+    
+    def visual(self):
+        edt_eff = np.zeros(self.num_sc)
+        edt_eff[:self.num_ctrl] = 1
+        edt_eff[self.num_ctrl:] = np.power(0.5, range(self.num_sc - self.num_ctrl))
+
+        bnn_correct = np.zeros(self.num_sc)
+        bnn_total = np.zeros(self.num_sc)
+        loader = torch.utils.data.DataLoader(self.train_dataset, batch_size=1)
+        self.model.eval()
+        for i, (input, ) in enumerate(loader):
+            scs = (input == 1).sum().item()
+            bnn_total[scs] += 1
+            # forward
+            # process the weights including binarization
+            self.bin_op.binarization()
+
+            output = self.model(input).sign()
+            mask = input.eq(1)
+            count_inputs = (input * mask).sum()
+            count_outputs = (output * mask).sum()
+            correct = count_inputs.eq(count_outputs)
+            if correct:
+                bnn_correct[scs] += 1
+        bnn_eff = bnn_correct / (bnn_total + 0.01)
+
+        plt.figure()
+        plt.bar(np.arange(self.num_sc)[37:50], bnn_total[37:50], alpha=0.9, width=0.2, label='Total')
+        plt.bar(np.arange(self.num_sc)[37:50] + 0.2, bnn_correct[37:50], alpha=0.9, width=0.2, label='BNN')
+        plt.bar(np.arange(self.num_sc)[37:50] + 0.4, bnn_total[37:50] * edt_eff[37:50], alpha=0.9, width=0.2, label='EDT')
+        plt.xlabel('# Scan Chains')
+        plt.xlabel('Test Cube Density')
+        plt.legend()
+        plt.savefig('encoding_dist.pdf')
+        plt.close()
+
+        plt.figure()
+        plt.bar(np.arange(self.num_sc)[37:50], edt_eff[37:50], width=0.2, label='EDT')
+        plt.bar(np.arange(self.num_sc)[37:50] + 0.2, bnn_eff[37:50], width=0.2, label='BNN')
+        plt.legend()
+        plt.savefig('encoding_eff.pdf')
+        plt.close()
+        
+        
+
+
+
 
     
     # def _valid(self):
@@ -222,5 +279,6 @@ if __name__=='__main__':
     
     bnn = BNNAutoEncoder(mlb_path=args.data_path)
     bnn.train()
+    bnn.visual()
 
     
