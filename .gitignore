@@ -1,2 +1,5 @@
 data/mlb.npy
 checkpoint/*
+*.pdf
+events*
+.DS_Store
