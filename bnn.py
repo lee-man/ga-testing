@@ -97,7 +97,7 @@ class BNNAutoEncoder(object):
     Remaining problems:
     The operataions should be totally bit-wise, without floating operation.
     '''
-    def __init__(self, mlb_path='data/mlb_cell.npy', num_ctrl=45, num_sc=415, upper_bound_pre=0.3, upper_bound=0.5, arch='fc_ae', epoches=100, batch_size=128, lr=0.01, wd=1e-5, seed=0):
+    def __init__(self, mlb_path='data/mlb_cell.npy', num_ctrl=45, num_sc=415, upper_bound_pre=0.2, upper_bound=0.5, arch='fc_ae', epoches=100, batch_size=128, lr=0.01, wd=1e-5, seed=0):
         self.mlb = np.load(mlb_path)
         self.num_ctrl = num_ctrl
         self.num_sc = num_sc
@@ -162,7 +162,7 @@ class BNNAutoEncoder(object):
 
     def merge_pre(self):
         logging.info('*' * 15)
-        logging.info('Start Merging.')
+        logging.info('Start Pre-Merging.')
         mlb = copy.deepcopy(self.mlb)
         mask = np.zeros(mlb.shape[0])
         idx_now = 0
@@ -184,6 +184,7 @@ class BNNAutoEncoder(object):
                     while mask[idx_now] == 1 and idx_now < (mlb.shape[0] - 1):
                         idx_now += 1
                     mask[idx_now] = 1
+                    print(idx_now)
                     merged_cube = copy.deepcopy(mlb[idx_now])
                     # break
                 elif mask[id] == 1:
@@ -197,6 +198,8 @@ class BNNAutoEncoder(object):
 
         merged_array = np.array(merged_array)
         self.data = (merged_array.sum(axis=2) > 0).astype(float)
+        # Saving the data
+        np.save('data/data.npy', self.data)
         logging.info('The size of dataset is {}'.format(self.data.shape[0]))
         specified_percentage = data.sum() / (self.data.shape[0] * self.num_sc)
         logging.info('Specified scan chain percentage after merging is {:.2f}%.'.format(100.*specified_percentage))
@@ -324,9 +327,79 @@ class BNNAutoEncoder(object):
         # plt.legend()
         # plt.savefig('encoding_eff.pdf')
         # plt.close()
+
+    def one_forward(self, merged_cube):
+        test_input = 2 * merged_cube - 1
+        test_input = torch.from_numpy(test_input)
+        test_input.unsqueeze(dim=1)
+        output = self.model(input).sign()
+        mask = input.eq(1)
+        count_inputs = (input * mask).sum()
+        count_outputs = (output * mask).sum()
+        correct = count_inputs.eq(count_outputs)
+
+        if (output.sum().item() / test_input.size(1)) <= self.upper_bound:
+            return correct, output.sum().item()
+        else:
+            return False, None
+        
     
     def merge_post(self):
-        pass
+        logging.info('*' * 15)
+        logging.info('Start Post-Merging.')
+        mlb = copy.deepcopy(self.mlb)
+        activated_num = 0
+        mask = np.zeros(mlb.shape[0])
+        idx_now = 0
+        mask[0] = 1
+        merged_array = []
+        merged_idx = [0]
+        merged_idx_failed = []
+        merged_cube = copy.deepcopy(mlb[idx_now])
+
+        self.model.eval()
+        self.bin_op.binarization()
+
+        while idx_now < (mlb.shape[0] - 1):
+            for id in range(idx_now+1, mlb.shape[0]):
+                row = mlb[id]
+                if id == (mlb.shape[0] - 1):
+                    if mask[id] != 1 and self.check_conflict(merged_cube, row):
+                        merged_cube_candidate = self.merge_two_cube(merged_cube, row)
+                        specified_percentage = self.calculate_specified_percentage(merged_cube_candidate)
+                        if specified_percentage <= self.upper_bound_pre:
+                            merged_cube = merged_cube_candidate
+                            mask[id] = 1
+                            merged_idx.append(id)
+
+                    encode_eff, ones = self.one_forward(merged_array)
+                    if encode_eff == True:
+                        activated_num += ones
+                        merged_array.append(merged_cube)
+                    else:
+                        merged_idx_failed.extend(merged_idx)
+    
+                    while mask[idx_now] == 1 and idx_now < (mlb.shape[0] - 1):
+                        idx_now += 1
+                    mask[idx_now] = 1
+                    merged_idx = [idx_now]
+                    merged_cube = copy.deepcopy(mlb[idx_now])
+                    # break
+                elif mask[id] == 1:
+                    continue
+                elif self.check_conflict(merged_cube, row):
+                    merged_cube_candidate = self.merge_two_cube(merged_cube, row)
+                    specified_percentage = self.calculate_specified_percentage(merged_cube_candidate)
+                    if specified_percentage <= self.upper_bound_pre:
+                        merged_cube = merged_cube_candidate
+                        mask[id] = 1
+                        merged_idx.append(id)
+
+        merged_array = np.array(merged_array)
+        self.data = (merged_array.sum(axis=2) > 0).astype(float)
+        logging.info('The size of encoded dataset is {}'.format(self.data.shape[0]))
+        activated_percentage = activated_num / (self.data.shape[0] * self.num_sc)
+        logging.info('Acitvated scan chain percentage after merging is {:.2f}%.'.format(100.*activated_num))
         
         
 
