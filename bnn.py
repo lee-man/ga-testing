@@ -1,4 +1,5 @@
 import argparse
+import copy
 import numpy as np
 import torch
 import torch.nn as nn
@@ -8,7 +9,7 @@ from torch.utils.tensorboard import SummaryWriter
 import os
 import sys
 import csv
-from models.fc_ae import FCAutoEncoder
+from models.ae import FCAutoEncoder
 import util
 from torchvision import datasets, transforms
 import logging
@@ -17,53 +18,76 @@ logging.basicConfig(level=logging.INFO)
 import matplotlib.pyplot as plt
 plt.switch_backend('agg')
 
-def create_mlb(num_id=338):
+def create_mlb(num_id=415, num_cell=330):
     ###########################
     # 1. get the unique id list 
     num_sc = 0
     num_exp = 0
     logging.info('#' * 15)
-    logging.info('Preproces the `patterns.csv` files.')
+    logging.info('Preproces the `TestCubes_ten_percent_11.csv` files.')
     id_list = []
-    with open('data/cube.csv', encoding='utf-8') as f:
+    with open('data/TestCubes_ten_percent_11.csv', encoding='utf-8') as f:
         f_csv = csv.reader(f)
-        
+        row_count = 0 # One test cube's information is listed in 4 rows
         for row in f_csv:
-            if len(row) == 0:
-                continue
-            num_exp += 1
+            if row_count == 0:
+                assert int(row[0]) == num_exp, 'The test cube ID is not consistent'
+                num_exp += 1
             
+            row_count = (row_count + 1) % 4
+
+
     logging.info('The size of testing data is {}'.format(num_exp))
 
     ###########################
     # 2. Multi-Label Binarizer
     # Create the Multi-Label Matrix
-    num_id = 338
-    logging.info('Create Multi-Label Binarizer')
-    mlb = -1 * np.ones((num_exp, num_id))
-    id_list = list(range(1, num_id + 1))
-    with open('data/cube.csv', encoding='utf-8') as f:
+    logging.info('Create Multi-Label Binarizer with Cells')
+    mlb = np.zeros((num_exp, num_id, num_cell))
+    with open('data/TestCubes_ten_percent_11.csv', encoding='utf-8') as f:
         f_csv = csv.reader(f)
         id = 0
+        row_count = 0
         for row in f_csv:
-            if len(row) == 0:
-                continue
-            for element in row:
-                idx = int(element) - 1
-                mlb[id, idx] = 1
-                num_sc += 1
-            id += 1
-    logging.info('The # and percentage of activated scan chains are {:.2f} and {:.2f}%.'.format(num_sc / num_exp, \
+            if row_count == 0:
+                assert int(row[0]) == id, 'The test cube ID is not consistent'
+            elif row_count == 1:
+                test_cube_id = np.array(list(map(int, row[:-1])))
+                num_sc += len(row)
+            elif row_count == 2:
+                test_cbue_cell_id = np.array(list(map(int, row[:-1])))
+                if len(row) != 0:
+                    mlb[(id, test_cube_id, test_cbue_cell_id)] = 1
+            elif row_count == 3:
+                id += 1
+            
+            row_count = (row_count + 1) % 4
+
+    logging.info('The # and percentage of activated scan chains are {:.2f} / {} and {:.2f}%.'.format(num_sc / num_exp, num_id, \
             100. * num_sc / (num_exp * num_id)))
 
-    np.save('data/mlb.npy', mlb)
+    np.save('data/mlb_cell.npy', mlb)
 
-# create_mlb()
+# create_mlb(num_id=415, num_cell=330)
+
 
 class BNNAutoEncoder(object):
     '''
     The class for BNN AutoEncoder.
     The basic idea is to use BNN as an approach to search the matrix A in EDT testing structure (might imposes stacked XOR network with some AND or OR ops).
+    ``````````````
+    Data: 26,649 test cubes with some blanks of test cubes.
+    On average 7.36/415 (1.77%) scan chains are used.
+    ``````````````
+    Workflow:
+    1. Merge the row data accoding to some constraints on specified scan chain percentage.
+    2. Train the BNN on merged data.
+    3. Fixed BNN structure and mege the row data to meet the encoding efficacy and low-power constraint.
+    ``````````````
+    Matrics:
+    1. Merged test cube count.
+    2. Average specified scan chain percentage.
+
     ``````````````
     Training phase: recover all 1's in x, and minimize # 1's (or # 1's approached the constrant definend by users, e.g. 50%);
     Deployment phase:
@@ -73,18 +97,25 @@ class BNNAutoEncoder(object):
     Remaining problems:
     The operataions should be totally bit-wise, without floating operation.
     '''
-    def __init__(self, mlb_path='data/mlb.npy', num_ctrl=37, num_sc=338, arch='fc_ae', epoches=100, batch_size=128, lr=0.01, wd=1e-5, seed=0):
+    def __init__(self, mlb_path='data/mlb_cell.npy', num_ctrl=45, num_sc=415, upper_bound_pre=0.3, upper_bound=0.5, arch='fc_ae', epoches=100, batch_size=128, lr=0.01, wd=1e-5, seed=0):
         self.mlb = np.load(mlb_path)
         self.num_ctrl = num_ctrl
         self.num_sc = num_sc
+        self.upper_bound_pre = upper_bound_pre
+        self.upper_bound = upper_bound
         self.epoches = epoches
         self.seed = seed
         self._get_device()
         self._set_random_seed()
         self.writer = SummaryWriter('runs')
+
+        # pre-merge to generate training data
+        self.merge_pre()
+        exit()
         
         # Traininig dataset and its loader
-        self.train_dataset = torch.utils.data.TensorDataset(torch.from_numpy(self.mlb).float())
+        self.data = 2 * self.data - 1
+        self.train_dataset = torch.utils.data.TensorDataset(torch.from_numpy(self.data).float())
         self.train_loader = torch.utils.data.DataLoader(
             self.train_dataset, batch_size=batch_size, shuffle=True)
 
@@ -101,8 +132,6 @@ class BNNAutoEncoder(object):
         # Define loss function
         self.criterion = nn.L1Loss() 
 
-    
-
     def _get_device(self):
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
     
@@ -111,6 +140,68 @@ class BNNAutoEncoder(object):
         torch.manual_seed(self.seed)
         if self.device == 'cuda':
             torch.cuda.manual_seed(self.seed)
+
+    def check_conflict(self, cube1, cube2):
+        '''
+        Check whether two cubes have a confliction
+        '''
+        return (cube1 * cube2).sum() == 0
+
+    def merge_two_cube(self, cube1, cube2):
+        '''
+        Merge two testing cube.
+        '''
+        cube = np.zeros(cube1.shape)
+        cube = ((cube1 + cube2) > 0).astype(float)
+        return cube
+
+    def calculate_specified_percentage(self, cube):
+        cube_with_cell = (cube.sum(axis=1) > 0).astype(float)
+        return cube_with_cell.sum()/cube.shape[0]
+
+
+    def merge_pre(self):
+        logging.info('*' * 15)
+        logging.info('Start Merging.')
+        mlb = copy.deepcopy(self.mlb)
+        mask = np.zeros(mlb.shape[0])
+        idx_now = 0
+        mask[0] = 1
+        merged_array = []
+        merged_cube = copy.deepcopy(mlb[idx_now])
+
+        while idx_now < (mlb.shape[0] - 1):
+            for id in range(idx_now+1, mlb.shape[0]):
+                row = mlb[id]
+                if id == (mlb.shape[0] - 1):
+                    if mask[id] != 1 and self.check_conflict(merged_cube, row):
+                        merged_cube_candidate = self.merge_two_cube(merged_cube, row)
+                        specified_percentage = self.calculate_specified_percentage(merged_cube_candidate)
+                        if specified_percentage <= self.upper_bound_pre:
+                            merged_cube = merged_cube_candidate
+                            mask[id] = 1
+                    merged_array.append(merged_cube)
+                    while mask[idx_now] == 1 and idx_now < (mlb.shape[0] - 1):
+                        idx_now += 1
+                    mask[idx_now] = 1
+                    merged_cube = copy.deepcopy(mlb[idx_now])
+                    # break
+                elif mask[id] == 1:
+                    continue
+                elif self.check_conflict(merged_cube, row):
+                    merged_cube_candidate = self.merge_two_cube(merged_cube, row)
+                    specified_percentage = self.calculate_specified_percentage(merged_cube_candidate)
+                    if specified_percentage <= self.upper_bound_pre:
+                        merged_cube = merged_cube_candidate
+                        mask[id] = 1
+
+        merged_array = np.array(merged_array)
+        self.data = (merged_array.sum(axis=2) > 0).astype(float)
+        logging.info('The size of dataset is {}'.format(self.data.shape[0]))
+        specified_percentage = data.sum() / (self.data.shape[0] * self.num_sc)
+        logging.info('Specified scan chain percentage after merging is {:.2f}%.'.format(100.*specified_percentage))
+
+
     
     def correct_calculate(self, inputs, outputs):
         mask = inputs.eq(1)
@@ -181,7 +272,16 @@ class BNNAutoEncoder(object):
                 if not os.path.isdir('checkpoint'):
                     os.mkdir('checkpoint')
                 torch.save(state, './checkpoint/ckpt.pth')
-            logging.info('Best accuracy: {}'.format(best_acc))                   
+            logging.info('Best accuracy: {}'.format(best_acc))
+        logging.info('Saving Final Model...')
+        state = {
+            'net': self.model.state_dict(),
+            'acc': acc,
+            'epoch': epoch,
+        }
+        if not os.path.isdir('checkpoint'):
+            os.mkdir('checkpoint')
+        torch.save(state, './checkpoint/ckpt_end.pth')               
     
     def visual(self):
         edt_eff = np.zeros(self.num_sc)
@@ -224,43 +324,20 @@ class BNNAutoEncoder(object):
         # plt.legend()
         # plt.savefig('encoding_eff.pdf')
         # plt.close()
-        
-        
-
-
-
-
     
-    # def _valid(self):
-    #     test_loss = 0
-    #     correct = 0
-    #     onepercent = 0
-    #     model.eval()
-    #     bin_op.binarization()
-    #     with torch.no_grad():
-    #         for (inputs, ) in self.train_loader:
-    #             inputs = inputs.to(self.device)
-    #             outputs = model(inputs)
-    #             test_loss += criterion(inputs, outputs).item()
-    #             mask = inputs.eq(1).float()
-    #             test_loss += criterion(outputs*mask, inputs*mask)
-    #             mask = inputs.eq(-1).float()
-    #             test_loss += 0.25 * criterion(outputs*mask, inputs*mask)
-    #             correct += correct_calculate(inputs, outputs)
-    #             onepercent += onepercent_calculate(outputs)
-
-    #     print(outputs)
-    #     bin_op.restore()
+    def merge_post(self):
+        pass
         
-    #     acc = 100. * float(correct) / len(test_loader.dataset)
-    #     return acc
+        
+
+
 
 
 if __name__=='__main__':
     # Training settings
     parser = argparse.ArgumentParser(description='PyTorch XNOR Testing Compression')
 
-    parser.add_argument('--data_path', type=str, default='data/mlb.npy', help='The path of data')
+    parser.add_argument('--data_path', type=str, default='data/mlb_cell.npy', help='The path of data')
     parser.add_argument('--batch_size', type=int, default=128, metavar='N',
             help='input batch size for training (default: 128)')
     parser.add_argument('--epochs', type=int, default=60, metavar='N',
