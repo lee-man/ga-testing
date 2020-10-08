@@ -59,7 +59,9 @@ def create_mlb(num_id=415, num_cell=330):
                 if len(row) != 0:
                     mlb[(id, test_cube_id, test_cbue_cell_id)] = 1
             elif row_count == 3:
-                id += 1
+                cell_value = np.array(list(map(int, row[:-1])))
+                cell_value = 2 * cell_value - 1
+                mlb[(id, test_cube_id, test_cbue_cell_id)] *= cell_value
             
             row_count = (row_count + 1) % 4
 
@@ -97,7 +99,7 @@ class BNNAutoEncoder(object):
     Remaining problems:
     The operataions should be totally bit-wise, without floating operation.
     '''
-    def __init__(self, mlb_path='data/mlb_cell.npy', num_ctrl=45, num_sc=415, upper_bound_pre=0.2, upper_bound=0.5, arch='fc_ae', epoches=100, batch_size=128, lr=0.01, wd=1e-5, seed=0):
+    def __init__(self, mlb_path='data/mlb_cell.npy', num_ctrl=45, num_sc=415, upper_bound_pre=0.2, upper_bound=0.5, arch='fc_ae', epoches=300, batch_size=16, lr=0.01, wd=1e-5, seed=0):
         self.mlb = np.load(mlb_path)
         self.num_ctrl = num_ctrl
         self.num_sc = num_sc
@@ -110,8 +112,13 @@ class BNNAutoEncoder(object):
         self.writer = SummaryWriter('runs')
 
         # pre-merge to generate training data
-        self.merge_pre()
-        exit()
+        # self.merge_pre()
+        self.data = np.load('data/data.npy')
+
+        logging.info('The size of dataset is {}'.format(self.data.shape[0]))
+        specified_percentage = self.data.sum() / (self.data.shape[0] * self.num_sc)
+        logging.info('Specified scan chain percentage after merging is {:.2f}% {:.2f}.'.format(100.*specified_percentage, specified_percentage*self.num_sc))
+
         
         # Traininig dataset and its loader
         self.data = 2 * self.data - 1
@@ -132,6 +139,9 @@ class BNNAutoEncoder(object):
         # Define loss function
         self.criterion = nn.L1Loss() 
 
+        ckpt = torch.load('checkpoint/ckpt.pth')
+        self.model.load_state_dict(ckpt['net'])
+
     def _get_device(self):
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
     
@@ -145,18 +155,34 @@ class BNNAutoEncoder(object):
         '''
         Check whether two cubes have a confliction
         '''
-        return (cube1 * cube2).sum() == 0
+        # return (cube1 * cube2).sum() == 0
+        # check scan chain level conflict
+        cube1_sc = (cube1.sum(axis=1) != 0).astype(float)
+        cube2_sc = (cube2.sum(axis=1) != 0).astype(float)
+        if (cube1_sc * cube2_sc).sum() == 0:
+            return True
+        else:
+            sc_index = ((cube1_sc * cube2_sc) == 1)
+            if (cube1[sc_index] * cube2[sc_index]).sum() == (sc_index.sum()):
+                return True
+            else:
+                return False
+        # product = ((cube1 * cube2) == -1).astype(float)
+        # return product.sum() == 0
+
 
     def merge_two_cube(self, cube1, cube2):
         '''
         Merge two testing cube.
         '''
         cube = np.zeros(cube1.shape)
-        cube = ((cube1 + cube2) > 0).astype(float)
+        # cube = ((cube1 + cube2) > 0).astype(float)
+        cube = np.sign(cube1 + cube2)
         return cube
 
     def calculate_specified_percentage(self, cube):
-        cube_with_cell = (cube.sum(axis=1) > 0).astype(float)
+        # cube_with_cell = (cube.sum(axis=1) > 0).astype(float)
+        cube_with_cell = (cube.sum(axis=1) != 0).astype(float)
         return cube_with_cell.sum()/cube.shape[0]
 
 
@@ -166,6 +192,7 @@ class BNNAutoEncoder(object):
         mlb = copy.deepcopy(self.mlb)
         mask = np.zeros(mlb.shape[0])
         idx_now = 0
+        print('Starting index', idx_now)
         mask[0] = 1
         merged_array = []
         merged_cube = copy.deepcopy(mlb[idx_now])
@@ -180,11 +207,12 @@ class BNNAutoEncoder(object):
                         if specified_percentage <= self.upper_bound_pre:
                             merged_cube = merged_cube_candidate
                             mask[id] = 1
+                            # print('Merged Index', id)
                     merged_array.append(merged_cube)
                     while mask[idx_now] == 1 and idx_now < (mlb.shape[0] - 1):
                         idx_now += 1
                     mask[idx_now] = 1
-                    print(idx_now)
+                    print('Starting index', idx_now)
                     merged_cube = copy.deepcopy(mlb[idx_now])
                     # break
                 elif mask[id] == 1:
@@ -195,13 +223,14 @@ class BNNAutoEncoder(object):
                     if specified_percentage <= self.upper_bound_pre:
                         merged_cube = merged_cube_candidate
                         mask[id] = 1
+                        # print('Merged Index', id)
 
         merged_array = np.array(merged_array)
-        self.data = (merged_array.sum(axis=2) > 0).astype(float)
+        self.data = (merged_array.sum(axis=2) != 0).astype(float)
         # Saving the data
         np.save('data/data.npy', self.data)
         logging.info('The size of dataset is {}'.format(self.data.shape[0]))
-        specified_percentage = data.sum() / (self.data.shape[0] * self.num_sc)
+        specified_percentage = self.data.sum() / (self.data.shape[0] * self.num_sc)
         logging.info('Specified scan chain percentage after merging is {:.2f}%.'.format(100.*specified_percentage))
 
 
@@ -243,7 +272,7 @@ class BNNAutoEncoder(object):
                 mask = inputs.eq(1).float()
                 loss = self.criterion(outputs*mask, inputs*mask)
                 mask = inputs.eq(-1).float()
-                loss += 0.02 * self.criterion(outputs*mask, inputs*mask)
+                loss += 0.01 * self.criterion(outputs*mask, inputs*mask)
                 loss.backward()
                 
                 # restore weights
@@ -329,12 +358,15 @@ class BNNAutoEncoder(object):
         # plt.close()
 
     def one_forward(self, merged_cube):
-        test_input = 2 * merged_cube - 1
-        test_input = torch.from_numpy(test_input)
-        test_input.unsqueeze(dim=1)
-        output = self.model(input).sign()
-        mask = input.eq(1)
-        count_inputs = (input * mask).sum()
+        test_input = (merged_cube.sum(axis=1) != 0).astype(float)
+        test_input = 2 * test_input - 1
+        test_input = torch.from_numpy(test_input).float()
+        test_input.reshape((1, -1))
+        test_input = test_input.unsqueeze(0)
+        # print(test_input.size())
+        output = self.model(test_input).sign()
+        mask = test_input.eq(1)
+        count_inputs = (test_input * mask).sum()
         count_outputs = (output * mask).sum()
         correct = count_inputs.eq(count_outputs)
 
@@ -372,7 +404,7 @@ class BNNAutoEncoder(object):
                             mask[id] = 1
                             merged_idx.append(id)
 
-                    encode_eff, ones = self.one_forward(merged_array)
+                    encode_eff, ones = self.one_forward(merged_cube)
                     if encode_eff == True:
                         activated_num += ones
                         merged_array.append(merged_cube)
@@ -382,6 +414,7 @@ class BNNAutoEncoder(object):
                     while mask[idx_now] == 1 and idx_now < (mlb.shape[0] - 1):
                         idx_now += 1
                     mask[idx_now] = 1
+                    logging.info('Merging index:{}'.format(idx_now))
                     merged_idx = [idx_now]
                     merged_cube = copy.deepcopy(mlb[idx_now])
                     # break
@@ -428,7 +461,8 @@ if __name__=='__main__':
     logging.info(args)
     
     bnn = BNNAutoEncoder(mlb_path=args.data_path)
-    bnn.train()
-    bnn.visual()
+    # bnn.train()
+    # bnn.visual()
+    bnn.merge_post()
 
     
