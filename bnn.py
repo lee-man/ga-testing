@@ -31,8 +31,11 @@ def create_mlb(num_id=415, num_cell=330):
         row_count = 0 # One test cube's information is listed in 4 rows
         for row in f_csv:
             if row_count == 0:
-                assert int(row[0]) == num_exp, 'The test cube ID is not consistent'
-                num_exp += 1
+                pass
+                # assert int(row[0]) == num_exp, 'The test cube ID is not consistent'
+            if row_count == 1:
+                if len(row) != 0:
+                    num_exp += 1
             
             row_count = (row_count + 1) % 4
 
@@ -50,7 +53,8 @@ def create_mlb(num_id=415, num_cell=330):
         row_count = 0
         for row in f_csv:
             if row_count == 0:
-                assert int(row[0]) == id, 'The test cube ID is not consistent'
+                # assert int(row[0]) == id, 'The test cube ID is not consistent'
+                pass
             elif row_count == 1:
                 test_cube_id = np.array(list(map(int, row[:-1])))
                 num_sc += len(row)
@@ -61,9 +65,14 @@ def create_mlb(num_id=415, num_cell=330):
             elif row_count == 3:
                 cell_value = np.array(list(map(int, row[:-1])))
                 cell_value = 2 * cell_value - 1
-                mlb[(id, test_cube_id, test_cbue_cell_id)] *= cell_value
+                if len(row) != 0:
+                    mlb[(id, test_cube_id, test_cbue_cell_id)] *= cell_value
+                    id += 1
             
             row_count = (row_count + 1) % 4
+    
+
+    assert id == num_exp, 'The total number of test cubes does not match'
 
     logging.info('The # and percentage of activated scan chains are {:.2f} / {} and {:.2f}%.'.format(num_sc / num_exp, num_id, \
             100. * num_sc / (num_exp * num_id)))
@@ -78,13 +87,13 @@ class BNNAutoEncoder(object):
     The class for BNN AutoEncoder.
     The basic idea is to use BNN as an approach to search the matrix A in EDT testing structure (might imposes stacked XOR network with some AND or OR ops).
     ``````````````
-    Data: 26,649 test cubes with some blanks of test cubes.
-    On average 7.36/415 (1.77%) scan chains are used.
+    Data: 25,093 test cubes with some blanks of test cubes.
+    On average 7.82/415 (1.88%) scan chains are used.
     ``````````````
     Workflow:
-    1. Merge the row data accoding to some constraints on specified scan chain percentage.
-    2. Train the BNN on merged data.
-    3. Fixed BNN structure and mege the row data to meet the encoding efficacy and low-power constraint.
+    1. Merge the row data accoding to some constraints on specified scan chain percentage **for multiple times**.
+    2. Train and evaluate the BNN on merged data.
+    3. Fixed BNN structure and mege the row data to meet the encoding efficacy and low-power constraint in real scenario.
     ``````````````
     Matrics:
     1. Merged test cube count.
@@ -99,10 +108,11 @@ class BNNAutoEncoder(object):
     Remaining problems:
     The operataions should be totally bit-wise, without floating operation.
     '''
-    def __init__(self, mlb_path='data/mlb_cell.npy', num_ctrl=45, num_sc=415, upper_bound_pre=0.2, upper_bound=0.5, arch='fc_ae', epoches=300, batch_size=16, lr=0.01, wd=1e-5, seed=0):
+    def __init__(self, mlb_path='data/mlb_cell.npy', num_ctrl=45, num_sc=415, num_merge=5, upper_bound_pre=0.2, upper_bound=0.5, arch='fc_ae', epoches=300, batch_size=16, lr=0.01, wd=1e-5, seed=0):
         self.mlb = np.load(mlb_path)
         self.num_ctrl = num_ctrl
         self.num_sc = num_sc
+        self.num_merge = num_merge
         self.upper_bound_pre = upper_bound_pre
         self.upper_bound = upper_bound
         self.epoches = epoches
@@ -112,7 +122,8 @@ class BNNAutoEncoder(object):
         self.writer = SummaryWriter('runs')
 
         # pre-merge to generate training data
-        # self.merge_pre()
+        self.merge_pre()
+        exit()
         self.data = np.load('data/data.npy')
 
         logging.info('The size of dataset is {}'.format(self.data.shape[0]))
@@ -190,45 +201,48 @@ class BNNAutoEncoder(object):
         logging.info('*' * 15)
         logging.info('Start Pre-Merging.')
         mlb = copy.deepcopy(self.mlb)
-        mask = np.zeros(mlb.shape[0])
-        idx_now = 0
-        print('Starting index', idx_now)
-        mask[0] = 1
-        merged_array = []
-        merged_cube = copy.deepcopy(mlb[idx_now])
 
-        while idx_now < (mlb.shape[0] - 1):
-            for id in range(idx_now+1, mlb.shape[0]):
-                row = mlb[id]
-                if id == (mlb.shape[0] - 1):
-                    if mask[id] != 1 and self.check_conflict(merged_cube, row):
+        merged_array = []
+        for merge_id in range(self.num_merge):
+            mlb = np.random.shuffle(mlb)
+            mask = np.zeros(mlb.shape[0])
+            idx_now = 0
+            print('Starting index', idx_now)
+            mask[0] = 1
+            merged_cube = copy.deepcopy(mlb[idx_now])
+
+            while idx_now < (mlb.shape[0] - 1):
+                for id in range(idx_now+1, mlb.shape[0]):
+                    row = mlb[id]
+                    if id == (mlb.shape[0] - 1):
+                        if mask[id] != 1 and self.check_conflict(merged_cube, row):
+                            merged_cube_candidate = self.merge_two_cube(merged_cube, row)
+                            specified_percentage = self.calculate_specified_percentage(merged_cube_candidate)
+                            if specified_percentage <= self.upper_bound_pre:
+                                merged_cube = merged_cube_candidate
+                                mask[id] = 1
+                                # print('Merged Index', id)
+                        merged_array.append(merged_cube)
+                        while mask[idx_now] == 1 and idx_now < (mlb.shape[0] - 1):
+                            idx_now += 1
+                        mask[idx_now] = 1
+                        print('Starting index', idx_now)
+                        merged_cube = copy.deepcopy(mlb[idx_now])
+                        # break
+                    elif mask[id] == 1:
+                        continue
+                    elif self.check_conflict(merged_cube, row):
                         merged_cube_candidate = self.merge_two_cube(merged_cube, row)
                         specified_percentage = self.calculate_specified_percentage(merged_cube_candidate)
                         if specified_percentage <= self.upper_bound_pre:
                             merged_cube = merged_cube_candidate
                             mask[id] = 1
                             # print('Merged Index', id)
-                    merged_array.append(merged_cube)
-                    while mask[idx_now] == 1 and idx_now < (mlb.shape[0] - 1):
-                        idx_now += 1
-                    mask[idx_now] = 1
-                    print('Starting index', idx_now)
-                    merged_cube = copy.deepcopy(mlb[idx_now])
-                    # break
-                elif mask[id] == 1:
-                    continue
-                elif self.check_conflict(merged_cube, row):
-                    merged_cube_candidate = self.merge_two_cube(merged_cube, row)
-                    specified_percentage = self.calculate_specified_percentage(merged_cube_candidate)
-                    if specified_percentage <= self.upper_bound_pre:
-                        merged_cube = merged_cube_candidate
-                        mask[id] = 1
-                        # print('Merged Index', id)
 
         merged_array = np.array(merged_array)
         self.data = (merged_array.sum(axis=2) != 0).astype(float)
         # Saving the data
-        np.save('data/data.npy', self.data)
+        np.save('data/data_{}.npy'.format(self.num_merge), self.data)
         logging.info('The size of dataset is {}'.format(self.data.shape[0]))
         specified_percentage = self.data.sum() / (self.data.shape[0] * self.num_sc)
         logging.info('Specified scan chain percentage after merging is {:.2f}%.'.format(100.*specified_percentage))
