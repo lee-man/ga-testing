@@ -79,8 +79,7 @@ def create_mlb(num_id=415, num_cell=330):
 
     np.save('data/mlb_cell.npy', mlb)
 
-create_mlb(num_id=415, num_cell=330)
-exit()
+# create_mlb(num_id=415, num_cell=330)
 
 
 class BNNAutoEncoder(object):
@@ -205,7 +204,7 @@ class BNNAutoEncoder(object):
 
         merged_array = []
         for merge_id in range(self.num_merge):
-            mlb = np.random.shuffle(mlb)
+            np.random.shuffle(mlb)
             mask = np.zeros(mlb.shape[0])
             idx_now = 0
             print('Starting index', idx_now)
@@ -243,7 +242,7 @@ class BNNAutoEncoder(object):
         merged_array = np.array(merged_array)
         self.data = (merged_array.sum(axis=2) != 0).astype(float)
         # Saving the data
-        np.save('data/data_{}.npy'.format(self.num_merge), self.data)
+        np.save('data/data_{}.npy'.format(self.num_merge), merged_array)
         logging.info('The size of dataset is {}'.format(self.data.shape[0]))
         specified_percentage = self.data.sum() / (self.data.shape[0] * self.num_sc)
         logging.info('Specified scan chain percentage after merging is {:.2f}%.'.format(100.*specified_percentage))
