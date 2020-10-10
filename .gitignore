@@ -5,3 +5,5 @@ events*
 .DS_Store
 .DS_Store
 models/__pycache__/ae.cpython-37.pyc
+.DS_Store
+*.npy

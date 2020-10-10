@@ -80,6 +80,7 @@ def create_mlb(num_id=415, num_cell=330):
     np.save('data/mlb_cell.npy', mlb)
 
 create_mlb(num_id=415, num_cell=330)
+exit()
 
 
 class BNNAutoEncoder(object):
