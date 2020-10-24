@@ -212,7 +212,7 @@ class BNNAutoEncoder(object):
             # np.random.shuffle(mlb)
             if merge_id > 0:
                 replace_idx = np.arange(1, mlb.shape[0])
-                replace_idx.append(0)
+                replace_idx = np.append(replace_idx, 0)
                 mlb = mlb[replace_idx]
             mask = np.zeros(mlb.shape[0])
             idx_now = 0
