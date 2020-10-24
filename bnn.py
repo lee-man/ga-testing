@@ -108,7 +108,7 @@ class BNNAutoEncoder(object):
     Remaining problems:
     The operataions should be totally bit-wise, without floating operation.
     '''
-    def __init__(self, mlb_path='data/mlb_cell.npy', num_ctrl=45, num_sc=415, num_merge=5, upper_bound_pre=0.2, upper_bound=0.5, arch='fc_ae', epoches=300, batch_size=16, lr=0.01, wd=1e-5, seed=0):
+    def __init__(self, mlb_path='data/mlb_cell.npy', num_ctrl=45, num_sc=415, num_merge=20, upper_bound_pre=0.2, upper_bound=0.5, arch='fc_ae', epoches=300, batch_size=16, lr=0.01, wd=1e-5, seed=208):
         self.mlb = np.load(mlb_path)
         self.num_ctrl = num_ctrl
         self.num_sc = num_sc
@@ -124,15 +124,17 @@ class BNNAutoEncoder(object):
         # pre-merge to generate training data
         self.merge_pre()
         exit()
-        self.data = np.load('data/data.npy')
+        self.data = np.load('data/data_{}_rotate.npy'.format(self.num_merge))
+        self.data = (np.abs(self.data).sum(axis=2) != 0).astype(float)
 
         logging.info('The size of dataset is {}'.format(self.data.shape[0]))
         specified_percentage = self.data.sum() / (self.data.shape[0] * self.num_sc)
-        logging.info('Specified scan chain percentage after merging is {:.2f}% {:.2f}.'.format(100.*specified_percentage, specified_percentage*self.num_sc))
+        logging.info('Specified scan chain percentage after merging is {:.2f}% ({:.2f}).'.format(100.*specified_percentage, specified_percentage*self.num_sc))
 
         
         # Traininig dataset and its loader
         self.data = 2 * self.data - 1
+        
         self.train_dataset = torch.utils.data.TensorDataset(torch.from_numpy(self.data).float())
         self.train_loader = torch.utils.data.DataLoader(
             self.train_dataset, batch_size=batch_size, shuffle=True)
@@ -146,12 +148,13 @@ class BNNAutoEncoder(object):
 
         # Define optimizer
         self.optimizer = optim.Adam(self.model.parameters(), lr=lr, weight_decay=wd)
+        # self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, 40, 0.1)
 
         # Define loss function
         self.criterion = nn.L1Loss() 
 
-        ckpt = torch.load('checkpoint/ckpt.pth')
-        self.model.load_state_dict(ckpt['net'])
+        # ckpt = torch.load('checkpoint/ckpt.pth')
+        # self.model.load_state_dict(ckpt['net'])
 
     def _get_device(self):
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -168,13 +171,14 @@ class BNNAutoEncoder(object):
         '''
         # return (cube1 * cube2).sum() == 0
         # check scan chain level conflict
-        cube1_sc = (cube1.sum(axis=1) != 0).astype(float)
-        cube2_sc = (cube2.sum(axis=1) != 0).astype(float)
+        cube1_sc = (np.abs(cube1).sum(axis=1) != 0).astype(float)
+        cube2_sc = (np.abs(cube2).sum(axis=1) != 0).astype(float)
         if (cube1_sc * cube2_sc).sum() == 0:
             return True
         else:
             sc_index = ((cube1_sc * cube2_sc) == 1)
-            if (cube1[sc_index] * cube2[sc_index]).sum() == (sc_index.sum()):
+            # if (cube1[sc_index] * cube2[sc_index]).sum() == (sc_index.sum()):
+            if ((cube1[sc_index] * cube2[sc_index]) == -1).sum() == 0:
                 return True
             else:
                 return False
@@ -200,11 +204,16 @@ class BNNAutoEncoder(object):
     def merge_pre(self):
         logging.info('*' * 15)
         logging.info('Start Pre-Merging.')
-        mlb = copy.deepcopy(self.mlb)
+        # mlb = copy.deepcopy(self.mlb)
+        mlb = self.mlb
 
         merged_array = []
         for merge_id in range(self.num_merge):
-            np.random.shuffle(mlb)
+            # np.random.shuffle(mlb)
+            if merge_id > 0:
+                replace_idx = np.arange(1, mlb.shape[0])
+                replace_idx.append(0)
+                mlb = mlb[replace_idx]
             mask = np.zeros(mlb.shape[0])
             idx_now = 0
             print('Starting index', idx_now)
@@ -286,7 +295,7 @@ class BNNAutoEncoder(object):
                 mask = inputs.eq(1).float()
                 loss = self.criterion(outputs*mask, inputs*mask)
                 mask = inputs.eq(-1).float()
-                loss += 0.01 * self.criterion(outputs*mask, inputs*mask)
+                loss += 0.001 * self.criterion(outputs*mask, inputs*mask)
                 loss.backward()
                 
                 # restore weights
@@ -319,6 +328,8 @@ class BNNAutoEncoder(object):
                     os.mkdir('checkpoint')
                 torch.save(state, './checkpoint/ckpt.pth')
             logging.info('Best accuracy: {}'.format(best_acc))
+            # self.scheduler.step()
+
         logging.info('Saving Final Model...')
         state = {
             'net': self.model.state_dict(),
@@ -337,6 +348,9 @@ class BNNAutoEncoder(object):
         bnn_correct = np.zeros(self.num_sc)
         bnn_total = np.zeros(self.num_sc)
         loader = torch.utils.data.DataLoader(self.train_dataset, batch_size=1)
+        total = 0
+        correct = 0
+        ones = 0
         self.model.eval()
         for i, (input, ) in enumerate(loader):
             scs = (input == 1).sum().item()
@@ -346,23 +360,32 @@ class BNNAutoEncoder(object):
             self.bin_op.binarization()
 
             output = self.model(input).sign()
-            mask = input.eq(1)
-            count_inputs = (input * mask).sum()
-            count_outputs = (output * mask).sum()
-            correct = count_inputs.eq(count_outputs)
-            if correct:
-                bnn_correct[scs] += 1
-        bnn_eff = bnn_correct / (bnn_total + 0.01)
 
-        plt.figure()
-        plt.bar(np.arange(self.num_sc)[37:50], bnn_total[37:50], alpha=0.9, width=0.2, label='Total')
-        plt.bar(np.arange(self.num_sc)[37:50] + 0.2, bnn_correct[37:50], alpha=0.9, width=0.2, label='BNN')
-        plt.bar(np.arange(self.num_sc)[37:50] + 0.4, bnn_total[37:50] * edt_eff[37:50], alpha=0.9, width=0.2, label='EDT')
-        plt.xlabel('# Scan Chains')
-        plt.ylabel('Test Cube Density')
-        plt.legend()
-        plt.savefig('encoding_dist.pdf')
-        plt.close()
+            total += input.size(0)
+            correct += self.correct_calculate(input, output)
+            ones += self.onepercent_calculate(output)
+
+            # mask = input.eq(1)
+            # count_inputs = (input * mask).sum()
+            # count_outputs = (output * mask).sum()
+            # correct = count_inputs.eq(count_outputs)
+            # if correct:
+            #     bnn_correct[scs] += 1
+        
+        # print(bnn_correct.sum())
+        print(100.*correct/total)
+        print(100.*ones/total)
+        # bnn_eff = bnn_correct / (bnn_total + 0.01)
+
+        # plt.figure()
+        # plt.bar(np.arange(self.num_sc)[37:50], bnn_total[37:50], alpha=0.9, width=0.2, label='Total')
+        # plt.bar(np.arange(self.num_sc)[37:50] + 0.2, bnn_correct[37:50], alpha=0.9, width=0.2, label='BNN')
+        # plt.bar(np.arange(self.num_sc)[37:50] + 0.4, bnn_total[37:50] * edt_eff[37:50], alpha=0.9, width=0.2, label='EDT')
+        # plt.xlabel('# Scan Chains')
+        # plt.ylabel('Test Cube Density')
+        # plt.legend()
+        # plt.savefig('encoding_dist.pdf')
+        # plt.close()
 
         # plt.figure()
         # plt.bar(np.arange(self.num_sc)[37:50], edt_eff[37:50], width=0.2, label='EDT')
@@ -466,8 +489,8 @@ if __name__=='__main__':
             help='learning rate (default: 0.01)')
     parser.add_argument('--wd', default=1e-5, type=float,
             metavar='W', help='weight decay (default: 1e-5)')
-    parser.add_argument('--seed', type=int, default=1, metavar='S',
-            help='random seed (default: 1)')
+    parser.add_argument('--seed', type=int, default=208, metavar='S',
+            help='random seed (default: 208)')
     parser.add_argument('--arch', action='store', default='fc_ae',
             help='the autoencoder structure: FCAutoEncoder')
     args = parser.parse_args()
@@ -475,8 +498,8 @@ if __name__=='__main__':
     logging.info(args)
     
     bnn = BNNAutoEncoder(mlb_path=args.data_path)
-    # bnn.train()
+    bnn.train()
     # bnn.visual()
-    bnn.merge_post()
+    # bnn.merge_post()
 
     

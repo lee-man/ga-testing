@@ -25,7 +25,7 @@ class BinConv2d(nn.Module): # change the name of BinConv2d
     '''
     remove the batch normalization.
     '''
-    def __init__(self, input_channels, output_channels,
+    def __init__(self, input_channels, output_channels, bn=True,
             kernel_size=-1, stride=-1, padding=-1, groups=1, dropout=0,
             Linear=False, Transpose=False, previous_conv=False, size=0):
         super(BinConv2d, self).__init__()
@@ -36,6 +36,7 @@ class BinConv2d(nn.Module): # change the name of BinConv2d
         self.padding = padding
         self.dropout_ratio = dropout
         self.previous_conv = previous_conv
+        self.non_linear = bn
 
         if dropout!=0:
             self.dropout = nn.Dropout(dropout)
@@ -49,15 +50,13 @@ class BinConv2d(nn.Module): # change the name of BinConv2d
             self.transconv = nn.ConvTranspose2d(input_channels, output_channels,
                     kernel_size=kernel_size, stride=stride, padding=padding, groups=groups)
         else:
-            # if self.previous_conv:
-            #     self.bn = nn.BatchNorm2d(int(input_channels/size), eps=1e-4, momentum=0.1, affine=True)
-            # else:
-            #     self.bn = nn.BatchNorm1d(input_channels, eps=1e-4, momentum=0.1, affine=True)
+            self.bn = nn.BatchNorm1d(input_channels, eps=1e-4, momentum=0.1, affine=True)
             self.linear = nn.Linear(input_channels, output_channels)
         self.relu = nn.ReLU(inplace=True)
     
     def forward(self, x):
-        # x = self.bn(x)
+        if self.non_linear:
+            x = self.bn(x)
         x = BinActive.apply(x)
         if self.dropout_ratio!=0:
             x = self.dropout(x)
@@ -69,26 +68,29 @@ class BinConv2d(nn.Module): # change the name of BinConv2d
             if self.previous_conv:
                 x = x.view(x.size(0), self.input_channels)
             x = self.linear(x)
-        x = self.relu(x)
+        # x = self.relu(x)
         return x
 
 class FCAutoEncoder(nn.Module):
     def __init__(self, dim_input, dim_latent):
         super(FCAutoEncoder, self).__init__()
         self.encoder = nn.Sequential(
-            BinConv2d(dim_input, int(dim_input/2), Linear=True),
-            BinConv2d(int(dim_input/2), dim_latent, Linear=True))
-            # BinConv2d(250, 100, Linear=True))
+            # BinConv2d(dim_input, dim_latent, bn=False, Linear=True))
+            BinConv2d(dim_input, int(dim_input/2), bn=False, Linear=True),   # y1=Ax   x in [0,1], y1=
+            # BinConv2d(dim_input, int(dim_input/4*3), bn=False, Linear=True),
+            # BinConv2d(int(dim_input/4*3), int(dim_input/2), Linear=True),
+            BinConv2d(int(dim_input/2), dim_latent, Linear=True))   # y2=1, if y1>p, else y2=0 ; y3 = A.y2, 
 
         self.decoder = nn.Sequential(
-            BinConv2d(dim_latent, int(dim_input/2), Linear=True),
-            BinConv2d(int(dim_input/2), dim_input, Linear=True))
-            # nn.Linear(500, 1000))
+            # BinConv2d(dim_latent, dim_input, bn=False, Linear=True))
+            BinConv2d(dim_latent, int(dim_input/2), bn=False, Linear=True),  # y1=Ax 
+            # BinConv2d(dim_latent, int(dim_input/2), bn=False, Linear=True),
+            # BinConv2d(int(dim_input/2), int(dim_input/4*3), Linear=True),
+            BinConv2d(int(dim_input/2), dim_input, Linear=True)) # y2=1 y1>Pinteger
 
     def forward(self, x):
         x = self.encoder(x)
         x = self.decoder(x)
-        # x = BinActive.apply(x)
         return x
 
 
