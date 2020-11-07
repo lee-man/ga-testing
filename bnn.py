@@ -103,7 +103,7 @@ def create_mlb_stochastic(num_id=415, num_data=40000, specified_percentage=0.1, 
                 os.makedirs(os.path.dirname('figs/'))
             plt.savefig('figs/sc_counts.png')
      # normalize
-    sc_counts += 1 # add 10 to avoid zero case.
+    sc_counts += 1 # add 1 to avoid zero case.
     sc_counts /= sc_counts.sum()
 
     data = np.zeros((num_data, num_id))
@@ -513,35 +513,6 @@ class BNNAutoEncoder(object):
         
         
 
-def train(epoch):
-    correct = 0
-    total = 0
-    model.train()
-    for batch_idx, (data, target) in enumerate(train_loader):
-        optimizer.zero_grad()
-
-        # process the weights including binarization
-        bin_op.binarization()
-
-        output = model(data)
-        loss = criterion(output, target)
-        loss.backward()
-
-        _, predicted = output.max(1)
-        total += target.size(0)
-        correct += predicted.eq(target).sum().item()
-
-
-        # restore weights
-        bin_op.restore()
-        bin_op.updateBinaryGradWeight()
-
-        optimizer.step()
-        if batch_idx % 10 == 0:
-            print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}|Acc:{:.3f}'.format(
-                epoch, batch_idx * len(data), len(train_loader.dataset),
-                100. * batch_idx / len(train_loader), loss.data.item(), 100.*correct/total))
-    return
 
 
 if __name__=='__main__':
@@ -566,29 +537,9 @@ if __name__=='__main__':
     logging.info(args)
     
     bnn = BNNAutoEncoder(mlb_path=args.data_path)
-    # bnn.train()
-    bnn.visual()
+    bnn.train()
+    # bnn.visual()
     # bnn.merge_post()
-
-    # train_loader = torch.utils.data.DataLoader(
-    #         datasets.MNIST('/Users/mli/data', train=True, download=True,
-    #             transform=transforms.Compose([
-    #                 transforms.ToTensor(),
-    #                 transforms.Normalize((0.1307,), (0.3081,))
-    #                 ])),
-    #             batch_size=32)
-    
-    # model = MLPClassifer()
-    # optimizer = optim.Adam(model.parameters(), lr=0.01,
-    #         weight_decay=1e-5)
-
-    # criterion = nn.CrossEntropyLoss()
-    # bin_op = util.BinOp(model)
-
-
-
-    # for epoch in range(1, 51):
-    #     train(epoch)
 
 
     
