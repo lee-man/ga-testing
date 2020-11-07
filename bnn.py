@@ -435,7 +435,7 @@ class BNNAutoEncoder(object):
         # plt.close()
 
     def one_forward(self, merged_cube):
-        test_input = (merged_cube.sum(axis=1) != 0).astype(float)
+        test_input = (np.abs(merged_cube.sum(axis=1)) != 0).astype(float)
         test_input = 2 * test_input - 1
         test_input = torch.from_numpy(test_input).float()
         test_input.reshape((1, -1))
@@ -456,10 +456,12 @@ class BNNAutoEncoder(object):
     def merge_post(self):
         logging.info('*' * 15)
         logging.info('Start Post-Merging.')
-        mlb = copy.deepcopy(self.mlb)
+        # mlb = copy.deepcopy(self.mlb)
+        mlb = self.mlb
         activated_num = 0
         mask = np.zeros(mlb.shape[0])
         idx_now = 0
+        print('Starting index', idx_now)
         mask[0] = 1
         merged_array = []
         merged_idx = [0]
@@ -537,9 +539,12 @@ if __name__=='__main__':
     logging.info(args)
     
     bnn = BNNAutoEncoder(mlb_path=args.data_path)
+    # Stage 1: Training bnn
     bnn.train()
     # bnn.visual()
-    # bnn.merge_post()
+    # Stage 2: Merging
+    # This step might have some differnece against the implementation from Zezhong.
+    bnn.merge_post()
 
 
     
