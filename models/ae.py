@@ -103,3 +103,18 @@ class CNNAutoEncoder(nn.Module):
 
     #     )
     pass
+
+
+class MLPClassifer(nn.Module):
+    def __init__(self, input_size=784, ouput_size=10):
+        super(MLPClassifer, self).__init__()
+        self.classifer = nn.Sequential(
+            BinConv2d(input_size, 500, bn=False, Linear=True),
+            BinConv2d(500, 100, Linear=True),
+            BinConv2d(100, 10, bn=False, Linear=True)
+        )
+
+    def forward(self, x):
+        x = x.view(x.size(0), -1)
+        output = self.classifer(x)
+        return output

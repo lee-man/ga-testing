@@ -9,7 +9,7 @@ from torch.utils.tensorboard import SummaryWriter
 import os
 import sys
 import csv
-from models.ae import FCAutoEncoder
+from models.ae import FCAutoEncoder, MLPClassifer
 import util
 from torchvision import datasets, transforms
 import logging
@@ -81,6 +81,44 @@ def create_mlb(num_id=415, num_cell=330):
 
 # create_mlb(num_id=415, num_cell=330)
 
+def create_mlb_stochastic(num_id=415, num_data=40000, specified_percentage=0.1, draw=True):
+    logging.info('Create stochastic data')
+
+    mlb = np.load('data/mlb_cell.npy')
+    mlb = (np.abs(mlb).sum(axis=2) != 0).astype(float)
+
+    sc_counts = np.zeros(num_id)
+    for row in mlb:
+        for (eid, element) in enumerate(row):
+            if element == 1:
+                sc_counts[eid] += 1
+    if draw:
+            plt.figure()
+            x = [i for i in range(num_id)]
+            # plt.plot(sc_counts)
+            plt.scatter(x, sc_counts)
+            plt.xlabel('Scan Chain ID')
+            plt.ylabel('Density')
+            if not os.path.isdir('figs/'):
+                os.makedirs(os.path.dirname('figs/'))
+            plt.savefig('figs/sc_counts.png')
+     # normalize
+    sc_counts += 1 # add 10 to avoid zero case.
+    sc_counts /= sc_counts.sum()
+
+    data = np.zeros((num_data, num_id))
+    for (i, row) in enumerate(data):
+        generate_row = np.random.choice(num_id, size=int(num_id*specified_percentage), replace=False, p=sc_counts)
+        data[i][generate_row] = 1
+    
+    np.save('data/data_stochasitc.npy', data)
+
+# create_mlb_stochastic()
+# exit()
+
+
+
+
 
 class BNNAutoEncoder(object):
     '''
@@ -108,7 +146,7 @@ class BNNAutoEncoder(object):
     Remaining problems:
     The operataions should be totally bit-wise, without floating operation.
     '''
-    def __init__(self, mlb_path='data/mlb_cell.npy', num_ctrl=45, num_sc=415, num_merge=20, upper_bound_pre=0.2, upper_bound=0.5, arch='fc_ae', epoches=300, batch_size=16, lr=0.01, wd=1e-5, seed=208):
+    def __init__(self, mlb_path='data/mlb_cell.npy', num_ctrl=100, num_sc=415, num_merge=20, upper_bound_pre=0.2, upper_bound=0.5, arch='fc_ae', epoches=300, batch_size=16, lr=0.01, wd=1e-5, seed=208):
         self.mlb = np.load(mlb_path)
         self.num_ctrl = num_ctrl
         self.num_sc = num_sc
@@ -122,9 +160,11 @@ class BNNAutoEncoder(object):
         self.writer = SummaryWriter('runs')
 
         # pre-merge to generate training data
-        self.merge_pre()
-        exit()
-        self.data = np.load('data/data_{}_rotate.npy'.format(self.num_merge))
+        # self.merge_pre()
+        # exit()
+        # self.data = np.load('data/data_{}_rotate.npy'.format(self.num_merge))
+        # self.data = (np.abs(self.data).sum(axis=2) != 0).astype(float)
+        self.data = np.load('data/data_1.npy')
         self.data = (np.abs(self.data).sum(axis=2) != 0).astype(float)
 
         logging.info('The size of dataset is {}'.format(self.data.shape[0]))
@@ -137,7 +177,7 @@ class BNNAutoEncoder(object):
         
         self.train_dataset = torch.utils.data.TensorDataset(torch.from_numpy(self.data).float())
         self.train_loader = torch.utils.data.DataLoader(
-            self.train_dataset, batch_size=batch_size, shuffle=True)
+            self.train_dataset, batch_size=1, shuffle=True)
 
         # Define models
         if arch == 'fc_ae':
@@ -153,8 +193,8 @@ class BNNAutoEncoder(object):
         # Define loss function
         self.criterion = nn.L1Loss() 
 
-        # ckpt = torch.load('checkpoint/ckpt.pth')
-        # self.model.load_state_dict(ckpt['net'])
+        ckpt = torch.load('checkpoint/ckpt.pth')
+        self.model.load_state_dict(ckpt['net'])
 
     def _get_device(self):
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -295,7 +335,7 @@ class BNNAutoEncoder(object):
                 mask = inputs.eq(1).float()
                 loss = self.criterion(outputs*mask, inputs*mask)
                 mask = inputs.eq(-1).float()
-                loss += 0.001 * self.criterion(outputs*mask, inputs*mask)
+                loss += 0.008 * self.criterion(outputs*mask, inputs*mask)
                 loss.backward()
                 
                 # restore weights
@@ -353,8 +393,8 @@ class BNNAutoEncoder(object):
         ones = 0
         self.model.eval()
         for i, (input, ) in enumerate(loader):
-            scs = (input == 1).sum().item()
-            bnn_total[scs] += 1
+            # scs = (input == 1).sum().item()
+            # bnn_total[scs] += 1
             # forward
             # process the weights including binarization
             self.bin_op.binarization()
@@ -473,7 +513,35 @@ class BNNAutoEncoder(object):
         
         
 
+def train(epoch):
+    correct = 0
+    total = 0
+    model.train()
+    for batch_idx, (data, target) in enumerate(train_loader):
+        optimizer.zero_grad()
 
+        # process the weights including binarization
+        bin_op.binarization()
+
+        output = model(data)
+        loss = criterion(output, target)
+        loss.backward()
+
+        _, predicted = output.max(1)
+        total += target.size(0)
+        correct += predicted.eq(target).sum().item()
+
+
+        # restore weights
+        bin_op.restore()
+        bin_op.updateBinaryGradWeight()
+
+        optimizer.step()
+        if batch_idx % 10 == 0:
+            print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}|Acc:{:.3f}'.format(
+                epoch, batch_idx * len(data), len(train_loader.dataset),
+                100. * batch_idx / len(train_loader), loss.data.item(), 100.*correct/total))
+    return
 
 
 if __name__=='__main__':
@@ -498,8 +566,29 @@ if __name__=='__main__':
     logging.info(args)
     
     bnn = BNNAutoEncoder(mlb_path=args.data_path)
-    bnn.train()
-    # bnn.visual()
+    # bnn.train()
+    bnn.visual()
     # bnn.merge_post()
+
+    # train_loader = torch.utils.data.DataLoader(
+    #         datasets.MNIST('/Users/mli/data', train=True, download=True,
+    #             transform=transforms.Compose([
+    #                 transforms.ToTensor(),
+    #                 transforms.Normalize((0.1307,), (0.3081,))
+    #                 ])),
+    #             batch_size=32)
+    
+    # model = MLPClassifer()
+    # optimizer = optim.Adam(model.parameters(), lr=0.01,
+    #         weight_decay=1e-5)
+
+    # criterion = nn.CrossEntropyLoss()
+    # bin_op = util.BinOp(model)
+
+
+
+    # for epoch in range(1, 51):
+    #     train(epoch)
+
 
     
