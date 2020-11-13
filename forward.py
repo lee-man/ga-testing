@@ -33,23 +33,46 @@ for k, v in model.state_dict().items():
 print('Store the weight...')
 with open('checkpoint/weight_np.pkl', 'wb') as f:
     pickle.dump(state_dict_np, f)
-
+np.save('checkpoint/encoder.0.linear.weight.npy', state_dict_np['encoder.0.linear.weight'])
+np.save('checkpoint/encoder.0.linear.bias.npy', state_dict_np['encoder.0.linear.bias'])
+np.save('checkpoint/encoder.1.bn.running_mean.npy', state_dict_np['encoder.1.bn.running_mean'])
+np.save('checkpoint/encoder.1.bn.running_var.npy', state_dict_np['encoder.1.bn.running_var'])
+np.save('checkpoint/encoder.1.bn.weight.npy', state_dict_np['encoder.1.bn.weight'])
+np.save('checkpoint/encoder.1.bn.bias.npy', state_dict_np['encoder.1.bn.bias'])
+np.save('checkpoint/encoder.1.linear.weight.npy',state_dict_np['encoder.1.linear.weight'])
+np.save('checkpoint/encoder.1.linear.bias.npy', state_dict_np['encoder.1.linear.bias'])
+np.save('checkpoint/decoder.0.linear.weight.npy', state_dict_np['decoder.0.linear.weight'])
+np.save('checkpoint/decoder.0.linear.bias.npy', state_dict_np['decoder.0.linear.bias'])
+np.save('checkpoint/decoder.1.bn.running_mean.npy', state_dict_np['decoder.1.bn.running_mean'])
+np.save('checkpoint/decoder.1.bn.running_var.npy', state_dict_np['decoder.1.bn.running_var'])
+np.save('checkpoint/decoder.1.bn.weight.npy', state_dict_np['decoder.1.bn.weight'])
+np.save('checkpoint/decoder.1.bn.bias.npy', state_dict_np['decoder.1.bn.bias'])
+np.save('checkpoint/decoder.1.linear.weight.npy', state_dict_np['decoder.1.linear.weight'])
+np.save('checkpoint/decoder.1.linear.bias.npy', state_dict_np['decoder.1.linear.bias'])
+# exit()
+# for i in state_dict_np:
+#     print(i)
+# exit()
 # Do a forward in torch
 fake_input = torch.rand(1, 415).sign()
 output_torch = model(fake_input)
 # print('Output from torch model', output_torch.sign())
 
-fake_input_np = fake_input.sign().numpy()
+fake_input_np = fake_input.sign().numpy()  # fake_input_np in {-1, 1}
 # Do a forward in numpy
-# encoder[0] linear
+# encoder[0] linear 
+# input (1, 415), (215, 415), (215, )
 x = np.matmul(fake_input_np, state_dict_np['encoder.0.linear.weight'].T) + state_dict_np['encoder.0.linear.bias']
 # encoder[1] bn
 x = (x - state_dict_np['encoder.1.bn.running_mean']) /  np.sqrt(state_dict_np['encoder.1.bn.running_var'] + 1e-5) * state_dict_np['encoder.1.bn.weight'] + state_dict_np['encoder.1.bn.bias']
+# => {-1, 1}
 x = np.sign(x)
 # encoder[1] linear
 x = np.matmul(x, state_dict_np['encoder.1.linear.weight'].T) + state_dict_np['encoder.1.linear.bias']
 
+# get the encoding bits in (45,)
 x = np.sign(x)
+
 # decoder[0] linear
 x = np.matmul(x, state_dict_np['decoder.0.linear.weight'].T) + state_dict_np['decoder.0.linear.bias']
 # decoder[1] bn
@@ -59,6 +82,8 @@ x = np.sign(x)
 x = np.matmul(x, state_dict_np['decoder.1.linear.weight'].T) + state_dict_np['decoder.1.linear.bias']
 
 # check the correctness
-print(np.sum(np.abs(output_torch.data.numpy() - x))/np.prod(x.shape))
+# print(np.sum(np.abs(output_torch.data.numpy() - x))/np.prod(x.shape))
 # This is the output of BNN
 x = np.sign(x)
+
+
