@@ -58,5 +58,7 @@ x = np.sign(x)
 # decoder[1] linear
 x = np.matmul(x, state_dict_np['decoder.1.linear.weight'].T) + state_dict_np['decoder.1.linear.bias']
 
+# check the correctness
+print(np.sum(np.abs(output_torch.data.numpy() - x))/np.prod(x.shape))
 # This is the output of BNN
 x = np.sign(x)
