@@ -146,7 +146,7 @@ class BNNAutoEncoder(object):
     Remaining problems:
     The operataions should be totally bit-wise, without floating operation.
     '''
-    def __init__(self, mlb_path='data/mlb_cell.npy', num_ctrl=100, num_sc=415, num_merge=20, upper_bound_pre=0.2, upper_bound=0.5, arch='fc_ae', epoches=300, batch_size=16, lr=0.01, wd=1e-5, seed=208):
+    def __init__(self, mlb_path='data/mlb_cell.npy', num_ctrl=45, num_sc=415, num_merge=20, upper_bound_pre=0.2, upper_bound=0.5, arch='fc_ae', epoches=300, batch_size=16, lr=0.01, wd=1e-5, seed=208):
         self.mlb = np.load(mlb_path)
         self.num_ctrl = num_ctrl
         self.num_sc = num_sc
@@ -164,8 +164,8 @@ class BNNAutoEncoder(object):
         # exit()
         # self.data = np.load('data/data_{}_rotate.npy'.format(self.num_merge))
         # self.data = (np.abs(self.data).sum(axis=2) != 0).astype(float)
-        self.data = np.load('data/data_1.npy')
-        self.data = (np.abs(self.data).sum(axis=2) != 0).astype(float)
+        self.data = np.load('data/data_stochastic.npy')
+        # self.data = (np.abs(self.data).sum(axis=2) != 0).astype(float)
 
         logging.info('The size of dataset is {}'.format(self.data.shape[0]))
         specified_percentage = self.data.sum() / (self.data.shape[0] * self.num_sc)
@@ -177,7 +177,7 @@ class BNNAutoEncoder(object):
         
         self.train_dataset = torch.utils.data.TensorDataset(torch.from_numpy(self.data).float())
         self.train_loader = torch.utils.data.DataLoader(
-            self.train_dataset, batch_size=1, shuffle=True)
+            self.train_dataset, batch_size=32, shuffle=True)
 
         # Define models
         if arch == 'fc_ae':
@@ -187,14 +187,15 @@ class BNNAutoEncoder(object):
             raise NotImplementedError
 
         # Define optimizer
-        self.optimizer = optim.Adam(self.model.parameters(), lr=lr, weight_decay=wd)
+        # self.optimizer = optim.Adam(self.model.parameters(), lr=lr, weight_decay=wd)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
         # self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, 40, 0.1)
 
         # Define loss function
         self.criterion = nn.L1Loss() 
 
-        ckpt = torch.load('checkpoint/ckpt.pth')
-        self.model.load_state_dict(ckpt['net'])
+        # ckpt = torch.load('checkpoint/ckpt.pth')
+        # self.model.load_state_dict(ckpt['net'])
 
     def _get_device(self):
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -544,7 +545,7 @@ if __name__=='__main__':
     # bnn.visual()
     # Stage 2: Merging
     # This step might have some differnece against the implementation from Zezhong.
-    bnn.merge_post()
+    # bnn.merge_post()
 
 
     

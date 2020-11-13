@@ -51,7 +51,8 @@ class BinConv2d(nn.Module): # change the name of BinConv2d
                     kernel_size=kernel_size, stride=stride, padding=padding, groups=groups)
         else:
             self.bn = nn.BatchNorm1d(input_channels, eps=1e-4, momentum=0.1, affine=True)
-            self.linear = nn.Linear(input_channels, output_channels)
+            # self.linear = nn.Linear(input_channels, output_channels, bias=False)
+            self.linear = nn.Linear(input_channels, output_channels) # should be check later. It is supposed to be non-biased. 
         self.relu = nn.ReLU(inplace=True)
     
     def forward(self, x):

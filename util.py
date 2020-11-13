@@ -93,8 +93,10 @@ class BinOp():
             self.target_modules[index].grad.data = m.add(m_add).mul(1.0-1.0/s[1]).mul(n)
 
 
-_, term_width = os.popen('stty size', 'r').read().split()
-term_width = int(term_width)
+# _, term_width = os.popen('stty size', 'r').read().split()
+# term_width = int(term_width)
+term_width = 202
+
 
 TOTAL_BAR_LENGTH = 65.
 last_time = time.time()
