@@ -56,8 +56,8 @@ class BinConv2d(nn.Module): # change the name of BinConv2d
         self.relu = nn.ReLU(inplace=True)
     
     def forward(self, x):
-        if self.non_linear:
-            x = self.bn(x)
+        # if self.non_linear:
+        #     x = self.bn(x)
         x = BinActive.apply(x)
         if self.dropout_ratio!=0:
             x = self.dropout(x)
@@ -69,6 +69,8 @@ class BinConv2d(nn.Module): # change the name of BinConv2d
             if self.previous_conv:
                 x = x.view(x.size(0), self.input_channels)
             x = self.linear(x)
+        if self.non_linear:
+            x = self.bn(x)
         # x = self.relu(x)
         return x
 
@@ -88,6 +90,28 @@ class FCAutoEncoder(nn.Module):
             # BinConv2d(dim_latent, int(dim_input/2), bn=False, Linear=True),
             # BinConv2d(int(dim_input/2), int(dim_input/4*3), Linear=True),
             BinConv2d(int(dim_input/2), dim_input, Linear=True)) # y2=1 y1>Pinteger
+
+    def forward(self, x):
+        x = self.encoder(x)
+        x = self.decoder(x)
+        return x
+
+class FCAutoEncoder1Layer(nn.Module):
+    def __init__(self, dim_input, dim_latent):
+        super(FCAutoEncoder, self).__init__()
+        self.encoder = nn.Sequential(
+            # BinConv2d(dim_input, dim_latent, bn=False, Linear=True))
+            # BinConv2d(dim_input, int(dim_input/2), bn=False, Linear=True),   # y1=Ax   x in [0,1], y1=
+            # # BinConv2d(dim_input, int(dim_input/4*3), bn=False, Linear=True),
+            # # BinConv2d(int(dim_input/4*3), int(dim_input/2), Linear=True),
+            BinConv2d(dim_input, dim_latent, Linear=True))   # y2=1, if y1>p, else y2=0 ; y3 = A.y2, 
+
+        self.decoder = nn.Sequential(
+            # BinConv2d(dim_latent, dim_input, bn=False, Linear=True))
+            BinConv2d(dim_latent, dim_input, Linear=True),  # y1=Ax 
+            # BinConv2d(dim_latent, int(dim_input/2), bn=False, Linear=True),
+            # BinConv2d(int(dim_input/2), int(dim_input/4*3), Linear=True),
+            # BinConv2d(int(dim_input/2), dim_input, Linear=True)) # y2=1 y1>Pinteger
 
     def forward(self, x):
         x = self.encoder(x)

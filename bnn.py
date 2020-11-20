@@ -9,7 +9,7 @@ from torch.utils.tensorboard import SummaryWriter
 import os
 import sys
 import csv
-from models.ae import FCAutoEncoder, MLPClassifer
+from models.ae import FCAutoEncoder, FCAutoEncoder1Layer, MLPClassifer
 import util
 from torchvision import datasets, transforms
 import logging
@@ -146,7 +146,7 @@ class BNNAutoEncoder(object):
     Remaining problems:
     The operataions should be totally bit-wise, without floating operation.
     '''
-    def __init__(self, mlb_path='data/mlb_cell.npy', num_ctrl=45, num_sc=415, num_merge=20, upper_bound_pre=0.2, upper_bound=0.5, arch='fc_ae', epoches=300, batch_size=16, lr=0.01, wd=1e-5, seed=208):
+    def __init__(self, mlb_path='data/mlb_cell.npy', num_ctrl=45, num_sc=415, num_merge=20, upper_bound_pre=0.2, upper_bound=0.5, arch='fc_ae_1layer', epoches=300, batch_size=16, lr=0.01, wd=1e-5, seed=208):
         self.mlb = np.load(mlb_path)
         self.num_ctrl = num_ctrl
         self.num_sc = num_sc
@@ -182,6 +182,9 @@ class BNNAutoEncoder(object):
         # Define models
         if arch == 'fc_ae':
             self.model = FCAutoEncoder(num_sc, num_ctrl)
+            self.bin_op = util.BinOp(self.model)
+        elif arch = 'fc_ae_1layer':
+            self.model = FCAutoEncoder1Layer(num_sc, num_ctrl)
             self.bin_op = util.BinOp(self.model)
         else:
             raise NotImplementedError
