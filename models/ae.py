@@ -50,7 +50,8 @@ class BinConv2d(nn.Module): # change the name of BinConv2d
             self.transconv = nn.ConvTranspose2d(input_channels, output_channels,
                     kernel_size=kernel_size, stride=stride, padding=padding, groups=groups)
         else:
-            self.bn = nn.BatchNorm1d(input_channels, eps=1e-4, momentum=0.1, affine=True)
+            # self.bn = nn.BatchNorm1d(input_channels, eps=1e-4, momentum=0.1, affine=True)
+            self.bn = nn.BatchNorm1d(output_channels, eps=1e-4, momentum=0.1, affine=True)
             # self.linear = nn.Linear(input_channels, output_channels, bias=False)
             self.linear = nn.Linear(input_channels, output_channels) # should be check later. It is supposed to be non-biased. 
         self.relu = nn.ReLU(inplace=True)
@@ -98,7 +99,7 @@ class FCAutoEncoder(nn.Module):
 
 class FCAutoEncoder1Layer(nn.Module):
     def __init__(self, dim_input, dim_latent):
-        super(FCAutoEncoder, self).__init__()
+        super(FCAutoEncoder1Layer, self).__init__()
         self.encoder = nn.Sequential(
             # BinConv2d(dim_input, dim_latent, bn=False, Linear=True))
             # BinConv2d(dim_input, int(dim_input/2), bn=False, Linear=True),   # y1=Ax   x in [0,1], y1=
@@ -108,7 +109,7 @@ class FCAutoEncoder1Layer(nn.Module):
 
         self.decoder = nn.Sequential(
             # BinConv2d(dim_latent, dim_input, bn=False, Linear=True))
-            BinConv2d(dim_latent, dim_input, Linear=True),  # y1=Ax 
+            BinConv2d(dim_latent, dim_input, Linear=True))# y1=Ax 
             # BinConv2d(dim_latent, int(dim_input/2), bn=False, Linear=True),
             # BinConv2d(int(dim_input/2), int(dim_input/4*3), Linear=True),
             # BinConv2d(int(dim_input/2), dim_input, Linear=True)) # y2=1 y1>Pinteger

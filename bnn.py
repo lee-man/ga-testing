@@ -183,7 +183,7 @@ class BNNAutoEncoder(object):
         if arch == 'fc_ae':
             self.model = FCAutoEncoder(num_sc, num_ctrl)
             self.bin_op = util.BinOp(self.model)
-        elif arch = 'fc_ae_1layer':
+        elif arch == 'fc_ae_1layer':
             self.model = FCAutoEncoder1Layer(num_sc, num_ctrl)
             self.bin_op = util.BinOp(self.model)
         else:
