@@ -56,15 +56,16 @@ class BinOp():
 
     def binarizeConvParams(self):
         for index in range(self.num_of_params):
-            n = self.target_modules[index].data[0].nelement()
-            s = self.target_modules[index].data.size()
-            if len(s) == 4:
-                m = self.target_modules[index].data.norm(1, 3, keepdim=True)\
-                        .sum(2, keepdim=True).sum(1, keepdim=True).div(n)
-            elif len(s) == 2:
-                m = self.target_modules[index].data.norm(1, 1, keepdim=True).div(n)
-            self.target_modules[index].data = \
-                    self.target_modules[index].data.sign().mul(m.expand(s))
+            # n = self.target_modules[index].data[0].nelement()
+            # s = self.target_modules[index].data.size()
+            # if len(s) == 4:
+            #     m = self.target_modules[index].data.norm(1, 3, keepdim=True)\
+            #             .sum(2, keepdim=True).sum(1, keepdim=True).div(n)
+            # elif len(s) == 2:
+            #     m = self.target_modules[index].data.norm(1, 1, keepdim=True).div(n)
+            # self.target_modules[index].data = \
+            #         self.target_modules[index].data.sign().mul(m.expand(s))
+            self.target_modules[index].data.sign()
 
     def restore(self):
         for index in range(self.num_of_params):

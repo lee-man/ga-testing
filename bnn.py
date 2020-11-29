@@ -165,6 +165,7 @@ class BNNAutoEncoder(object):
         # self.data = np.load('data/data_{}_rotate.npy'.format(self.num_merge))
         # self.data = (np.abs(self.data).sum(axis=2) != 0).astype(float)
         self.data = np.load('data/data_stochastic.npy')
+        # self.data = np.load('data/data_1.npy')
         # self.data = (np.abs(self.data).sum(axis=2) != 0).astype(float)
 
         logging.info('The size of dataset is {}'.format(self.data.shape[0]))
@@ -384,7 +385,7 @@ class BNNAutoEncoder(object):
             os.mkdir('checkpoint')
         torch.save(state, './checkpoint/ckpt_end.pth')               
     
-    def visual(self):
+    def test_visual(self):
         edt_eff = np.zeros(self.num_sc)
         edt_eff[:self.num_ctrl] = 1
         edt_eff[self.num_ctrl:] = np.power(0.5, range(self.num_sc - self.num_ctrl))
@@ -544,9 +545,10 @@ if __name__=='__main__':
     
     bnn = BNNAutoEncoder(mlb_path=args.data_path)
     # Stage 1: Training bnn
-    bnn.train()
-    # bnn.visual()
-    # Stage 2: Merging
+    # bnn.train()
+    # Stage 2: Testing on small datasets
+    bnn.test_visual()
+    # Stage 3: Merging
     # This step might have some differnece against the implementation from Zezhong.
     # bnn.merge_post()
 
