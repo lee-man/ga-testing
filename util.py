@@ -1,4 +1,5 @@
 import torch.nn as nn
+from models.ae import Linear01
 import numpy
 import os
 import sys
@@ -11,7 +12,7 @@ class BinOp():
         # count the number of Conv2d and Linear
         count_targets = 0
         for m in model.modules():
-            if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
+            if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear) or isinstance(m, Linear01):
                 count_targets = count_targets + 1
 
         # start_range = 1
@@ -24,7 +25,7 @@ class BinOp():
         self.target_modules = []
         # index = -1
         for m in model.modules():
-            if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
+            if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear) or isinstance(m, Linear01):
                 # index = index + 1
                 # if index in self.bin_range:
                 tmp = m.weight.data.clone()
@@ -65,7 +66,7 @@ class BinOp():
             #     m = self.target_modules[index].data.norm(1, 1, keepdim=True).div(n)
             # self.target_modules[index].data = \
             #         self.target_modules[index].data.sign().mul(m.expand(s))
-            self.target_modules[index].data.sign()
+            self.target_modules[index].data  = self.target_modules[index].data.sign()
 
     def restore(self):
         for index in range(self.num_of_params):

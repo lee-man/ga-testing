@@ -146,7 +146,7 @@ class BNNAutoEncoder(object):
     Remaining problems:
     The operataions should be totally bit-wise, without floating operation.
     '''
-    def __init__(self, mlb_path='data/mlb_cell.npy', num_ctrl=45, num_sc=415, num_merge=20, upper_bound_pre=0.2, upper_bound=0.5, arch='fc_ae_1layer', epoches=300, batch_size=16, lr=0.01, wd=1e-5, seed=208):
+    def __init__(self, mlb_path='data/mlb_cell.npy', num_ctrl=45, num_sc=415, num_merge=20, upper_bound_pre=0.2, upper_bound=0.5, arch='fc_ae_1layer', aplha=0.008, epoches=300, batch_size=16, lr=0.01, wd=1e-5, seed=208):
         self.mlb = np.load(mlb_path)
         self.num_ctrl = num_ctrl
         self.num_sc = num_sc
@@ -154,6 +154,7 @@ class BNNAutoEncoder(object):
         self.upper_bound_pre = upper_bound_pre
         self.upper_bound = upper_bound
         self.epoches = epoches
+        self.alpha = aplha
         self.seed = seed
         self._get_device()
         self._set_random_seed()
@@ -340,7 +341,7 @@ class BNNAutoEncoder(object):
                 mask = inputs.eq(1).float()
                 loss = self.criterion(outputs*mask, inputs*mask)
                 mask = inputs.eq(-1).float()
-                loss += 0.008 * self.criterion(outputs*mask, inputs*mask)
+                loss += self.alpha * self.criterion(outputs*mask, inputs*mask)
                 loss.backward()
                 
                 # restore weights
@@ -545,9 +546,9 @@ if __name__=='__main__':
     
     bnn = BNNAutoEncoder(mlb_path=args.data_path)
     # Stage 1: Training bnn
-    # bnn.train()
+    bnn.train()
     # Stage 2: Testing on small datasets
-    bnn.test_visual()
+    # bnn.test_visual()
     # Stage 3: Merging
     # This step might have some differnece against the implementation from Zezhong.
     # bnn.merge_post()

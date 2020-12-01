@@ -21,10 +21,12 @@ class BinActive(torch.autograd.Function):
         grad_input[input.le(-1)] = 0
         return grad_input
 
+class Linear01(nn.Linear):
+    def forward(self, input):
+        return F.linear(input, (self.weight + 1.0) / 2.0, self.bias)
+
+
 class BinConv2d(nn.Module): # change the name of BinConv2d
-    '''
-    remove the batch normalization.
-    '''
     def __init__(self, input_channels, output_channels, bn=True,
             kernel_size=-1, stride=-1, padding=-1, groups=1, dropout=0,
             Linear=False, Transpose=False, previous_conv=False, size=0):
@@ -53,13 +55,16 @@ class BinConv2d(nn.Module): # change the name of BinConv2d
             # self.bn = nn.BatchNorm1d(input_channels, eps=1e-4, momentum=0.1, affine=True)
             self.bn = nn.BatchNorm1d(output_channels, eps=1e-4, momentum=0.1, affine=True)
             # self.linear = nn.Linear(input_channels, output_channels, bias=False)
-            self.linear = nn.Linear(input_channels, output_channels) # should be check later. It is supposed to be non-biased. 
+            self.linear = Linear01(input_channels, output_channels, bias=False)
+            # self.linear = nn.Linear(input_channels, output_channels) # should be check later. It is supposed to be non-biased. 
         self.relu = nn.ReLU(inplace=True)
     
     def forward(self, x):
         # if self.non_linear:
         #     x = self.bn(x)
         x = BinActive.apply(x)
+        # print('input x', x)
+        x = (x + 1.0) / 2.0
         if self.dropout_ratio!=0:
             x = self.dropout(x)
         if not self.Linear and not self.Transpose:
@@ -70,8 +75,10 @@ class BinConv2d(nn.Module): # change the name of BinConv2d
             if self.previous_conv:
                 x = x.view(x.size(0), self.input_channels)
             x = self.linear(x)
+            # print('after linear', x)
         if self.non_linear:
             x = self.bn(x)
+            # print('after bn', x)
         # x = self.relu(x)
         return x
 
