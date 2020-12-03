@@ -10,7 +10,7 @@ import pickle
 
 # Some model parameters and experiment parameters
 num_sc = 415
-num_ctrl = 45
+num_ctrl = 100
 
 # Load the model
 # model = FCAutoEncoder(num_sc, num_ctrl)
@@ -53,12 +53,14 @@ np.save('checkpoint/decoder.1.linear.weight.npy', state_dict_np['decoder.1.linea
 np.save('checkpoint/decoder.1.linear.bias.npy', state_dict_np['decoder.1.linear.bias'])
 '''
 # One-layer
+encoder_sign = np.sign(state_dict_np['encoder.0.bn.weight'])
+decoder_sign = np.sign(state_dict_np['decoder.0.bn.weight'])
 thred_encoder = -state_dict_np['encoder.0.bn.bias']/state_dict_np['encoder.0.bn.weight'] * np.sqrt(state_dict_np['encoder.0.bn.running_var'] + 1e-5) + state_dict_np['encoder.0.bn.running_mean']
-thred_encoder = np.floor(thred_encoder)
+thred_encoder = np.floor(thred_encoder) * encoder_sign
 thred_decoder = -state_dict_np['decoder.0.bn.bias']/state_dict_np['decoder.0.bn.weight'] * np.sqrt(state_dict_np['decoder.0.bn.running_var'] + 1e-5) + state_dict_np['decoder.0.bn.running_mean']
-thred_decoder = np.floor(thred_decoder)
-state_dict_np['encoder.0.linear.weight'] = (state_dict_np['encoder.0.linear.weight'] + 1.0) / 2.0
-state_dict_np['decoder.0.linear.weight'] = (state_dict_np['decoder.0.linear.weight'] + 1.0) / 2.0
+thred_decoder = np.floor(thred_decoder) * decoder_sign
+state_dict_np['encoder.0.linear.weight'] = (state_dict_np['encoder.0.linear.weight'] + 1.0) / 2.0 * np.expand_dims(encoder_sign, axis=1)
+state_dict_np['decoder.0.linear.weight'] = (state_dict_np['decoder.0.linear.weight'] + 1.0) / 2.0 * np.expand_dims(decoder_sign, axis=1)
 np.save('checkpoint/encoder.linear.weight.npy', state_dict_np['encoder.0.linear.weight'])
 np.save('checkpoint/encoder.bn.thred.npy', thred_encoder)
 np.save('checkpoint/decoder.linear.weight.npy', state_dict_np['decoder.0.linear.weight'])
@@ -113,7 +115,7 @@ x = np.matmul(fake_input_np, state_dict_np['encoder.0.linear.weight'].T)
 # caculate the threshold
 # thred_encoder = -state_dict_np['encoder.0.bn.bias']/state_dict_np['encoder.0.bn.weight'] * np.sqrt(state_dict_np['encoder.0.bn.running_var'] + 1e-5) + state_dict_np['encoder.0.bn.running_mean']
 x = (x >= thred_encoder).astype(float)
-x = (((x * 2.0 - 1.0)* np.sign(state_dict_np['encoder.0.bn.weight'])) + 1.0) / 2.0
+# x = (((x * 2.0 - 1.0)* np.sign(state_dict_np['encoder.0.bn.weight'])) + 1.0) / 2.0
 
 # decoder linear
 x = np.matmul(x, state_dict_np['decoder.0.linear.weight'].T)
@@ -122,7 +124,7 @@ x = np.matmul(x, state_dict_np['decoder.0.linear.weight'].T)
 # thred_decoder = -state_dict_np['decoder.0.bn.bias']/state_dict_np['decoder.0.bn.weight'] * np.sqrt(state_dict_np['decoder.0.bn.running_var'] + 1e-5) + state_dict_np['decoder.0.bn.running_mean']
 # print(thred_decoder)
 x = (x >= thred_decoder).astype(float)
-x = (((x * 2.0 - 1.0)* np.sign(state_dict_np['decoder.0.bn.weight'])) + 1.0) / 2.0
+# x = (((x * 2.0 - 1.0)* np.sign(state_dict_np['decoder.0.bn.weight'])) + 1.0) / 2.0
 # print(output_torch.data.sign())
 # check the correctness
 print('Error', np.sum(np.abs((output_torch.data.sign().numpy()+1.0)/2.0 - x))/np.prod(x.shape))
