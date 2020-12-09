@@ -147,7 +147,8 @@ class BNNAutoEncoder(object):
     The operataions should be totally bit-wise, without floating operation.
     '''
     def __init__(self, mlb_path='data/mlb_cell.npy', num_ctrl=100, num_sc=415, num_merge=20, upper_bound_pre=0.2, upper_bound=0.5, arch='fc_ae_1layer', aplha=0.008, epoches=300, batch_size=16, lr=0.01, wd=1e-5, seed=208):
-        self.mlb = np.load(mlb_path)
+        # self.mlb = np.load(mlb_path)
+        self.mlb = None
         self.num_ctrl = num_ctrl
         self.num_sc = num_sc
         self.num_merge = num_merge
@@ -326,6 +327,8 @@ class BNNAutoEncoder(object):
             # print(name)
             if 'bn.weight' in name:
                 param.requires_grad = False
+            # if 'bn' in name:
+            #     param.requires_grad = False
         for epoch in range(self.epoches):
             logging.info('\nEpoch {}:'.format(epoch))
             self.model.train()
@@ -344,7 +347,7 @@ class BNNAutoEncoder(object):
                 outputs = F.tanh(outputs)
 
                 mask = inputs.eq(1).float()
-                loss = self.criterion(outputs*mask, inputs*mask) # This loss is sick!
+                loss = self.criterion(outputs*mask, inputs*mask)
                 mask = inputs.eq(-1).float()
                 loss += self.alpha * self.criterion(outputs*mask, inputs*mask)
                 loss.backward()
