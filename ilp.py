@@ -42,7 +42,7 @@ num_ctrl = 100
 # A: the complete connection matrix; A_hat: the selected connection matrix;
 # b: the complete threshold; b_hat: the selected threshold
 # x: the encoding bits; y: the merged test cube to be encoded; y_hat: the decoded/re-constructed test cube
-y = np.random.choice(2, (num_sc), p=[0.95, 0.05])
+y = np.random.choice(2, (num_sc), p=[0.8, 0.2])
 x = cp.Variable(num_ctrl, boolean=True)
 # A = state_dict_np['decoder.0.linear.weight'] * np.expand_dims(thred_sign, axis=1)
 # b = thred_decoder * thred_sign

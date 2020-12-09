@@ -3,6 +3,7 @@ Check the correctness of torch/numpy conversion.
 '''
 
 import numpy as np
+import matplotlib.pyplot as plt
 import torch
 from models.ae import FCAutoEncoder, FCAutoEncoder1Layer, MLPClassifer
 import util
@@ -53,14 +54,12 @@ np.save('checkpoint/decoder.1.linear.weight.npy', state_dict_np['decoder.1.linea
 np.save('checkpoint/decoder.1.linear.bias.npy', state_dict_np['decoder.1.linear.bias'])
 '''
 # One-layer
-encoder_sign = np.sign(state_dict_np['encoder.0.bn.weight'])
-decoder_sign = np.sign(state_dict_np['decoder.0.bn.weight'])
-thred_encoder = -state_dict_np['encoder.0.bn.bias']/state_dict_np['encoder.0.bn.weight'] * np.sqrt(state_dict_np['encoder.0.bn.running_var'] + 1e-5) + state_dict_np['encoder.0.bn.running_mean']
-thred_encoder = np.floor(thred_encoder) * encoder_sign
-thred_decoder = -state_dict_np['decoder.0.bn.bias']/state_dict_np['decoder.0.bn.weight'] * np.sqrt(state_dict_np['decoder.0.bn.running_var'] + 1e-5) + state_dict_np['decoder.0.bn.running_mean']
-thred_decoder = np.floor(thred_decoder) * decoder_sign
-state_dict_np['encoder.0.linear.weight'] = (state_dict_np['encoder.0.linear.weight'] + 1.0) / 2.0 * np.expand_dims(encoder_sign, axis=1)
-state_dict_np['decoder.0.linear.weight'] = (state_dict_np['decoder.0.linear.weight'] + 1.0) / 2.0 * np.expand_dims(decoder_sign, axis=1)
+thred_encoder = -state_dict_np['encoder.0.bn.bias'] * np.sqrt(state_dict_np['encoder.0.bn.running_var'] + 1e-5) + state_dict_np['encoder.0.bn.running_mean']
+thred_encoder = np.floor(thred_encoder) 
+thred_decoder = -state_dict_np['decoder.0.bn.bias'] * np.sqrt(state_dict_np['decoder.0.bn.running_var'] + 1e-5) + state_dict_np['decoder.0.bn.running_mean']
+thred_decoder = np.floor(thred_decoder)
+state_dict_np['encoder.0.linear.weight'] = (state_dict_np['encoder.0.linear.weight'] + 1.0) / 2.0 
+state_dict_np['decoder.0.linear.weight'] = (state_dict_np['decoder.0.linear.weight'] + 1.0) / 2.0
 np.save('checkpoint/encoder.linear.weight.npy', state_dict_np['encoder.0.linear.weight'])
 np.save('checkpoint/encoder.bn.thred.npy', thred_encoder)
 np.save('checkpoint/decoder.linear.weight.npy', state_dict_np['decoder.0.linear.weight'])
@@ -129,3 +128,32 @@ x = (x >= thred_decoder).astype(float)
 # check the correctness
 print('Error', np.sum(np.abs((output_torch.data.sign().numpy()+1.0)/2.0 - x))/np.prod(x.shape))
 # This is the output of BNN
+
+
+# Plot:
+# mlb = np.load('data/mlb_cell.npy')
+# mlb = (np.abs(mlb).sum(axis=2) != 0).astype(float)
+# sc_counts = np.zeros(num_sc)
+# for row in mlb:
+#     for (eid, element) in enumerate(row):
+#         if element == 1:
+#             sc_counts[eid] += 1
+
+# sc_weights = np.sum(state_dict_np['decoder.0.linear.weight'], axis=1)
+# # print(sc_counts.shape)
+# # print(sc_weights.shape)
+# # print(thred_decoder.shape)
+# # exit()
+# x = np.arange(num_sc)
+# # Do the normalization
+# y_multi = [sc_counts/np.sum(sc_counts), sc_weights/np.sum(sc_weights), thred_decoder/np.sum(thred_decoder)]
+# labels = ['Frequency', 'A weight', 'Threshold']
+# fig, ax = plt.subplots()
+# ax.bar(x-0.2, y_multi[0], width=0.2, label=labels[0])
+# ax.bar(x, y_multi[1], width=0.2, label=labels[1])
+# ax.bar(x+0.2, y_multi[2], width=0.2, label=labels[2])
+
+# ax.legend()
+
+# plt.savefig('figs/hist_all.pdf')
+
