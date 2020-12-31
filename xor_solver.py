@@ -30,13 +30,13 @@ class XORSolver(object):
                         if free_idx == None:
                             free_idx = list(range(pivot_idx[-2] + 1, pivot_idx[-1]))
                         else:
-                            free_idx.append(range(pivot_idx[-1] + 1, pivot_idx[-1]))
+                            free_idx += list(range(pivot_idx[-1] + 1, pivot_idx[-1]))
                     break
         if m < n:
             if free_idx == None:
                 free_idx = list(range(pivot_idx[-1] + 1, n))
             else:
-                free_idx.append(range(pivot_idx[-1] + 1, n))
+                free_idx += list(range(pivot_idx[-1] + 1, n))
         return pivot_idx, free_idx
     
     def random_free_varibles(self, free_idx):
@@ -46,12 +46,12 @@ class XORSolver(object):
 
     def gaussian_elimination(self):
         (m, n) = np.shape(self.A)
-        if m > n:
-            print('A is a tall matrix (m > n).')
-        elif m == n:
-            print('A is a square matrix (m = n).')
-        else:
-            print('A is a fat matrix (m < n).')
+        # if m > n:
+        #     print('A is a tall matrix (m > n).')
+        # elif m == n:
+        #     print('A is a square matrix (m = n).')
+        # else:
+        #     print('A is a fat matrix (m < n).')
 
         # Swap rows to get echelon form of matrix
         for i in range (m-1):
@@ -75,15 +75,15 @@ class XORSolver(object):
 
 
         # Check Solvability
-        print('#### Check Solvability ####')
+        # print('#### Check Solvability ####')
         for i in range(m-1, -1, -1):
             if (self.b[i] == True) and (np.sum(self.A[i, :]) == 0):
                 self.status = False # No solution
-                print('No solution...')
+                # print('No solution...')
                 break
         if self.status == None:
             self.status = True # One or infinite solutions
-            print('One or inifite solutions...')
+            # print('One or inifite solutions...')
         
         # print('#### Row reduced A #### \n', self.A)
 
@@ -92,17 +92,18 @@ class XORSolver(object):
             self.x = np.zeros(n).astype(dtype=bool)
             pivot_idx, free_idx = self.find_free_variables()
 
-            print('Pivot variables: ', pivot_idx)
-            print('Free variables: ', free_idx)
+            # print('Pivot variables: ', pivot_idx)
+            # print('Free variables: ', free_idx)
             if free_idx == None:
-                print('A is full rank.')
+                pass
+                # print('A is full rank.')
             else:
                 self.random_free_varibles(free_idx)
-            print(self.x)
+            # print(self.x)
             # exit()
 
             # Backsubsition
-            print('#### Start backsubstition####')
+            # print('#### Start backsubstition####')
             # Find the first effective equation
             for i in range(m-1, -1, -1):
                 if np.sum(self.A[i, :]) != 0:
