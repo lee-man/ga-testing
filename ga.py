@@ -6,6 +6,8 @@ import numpy as np
 from xor_solver import XORSolver
 from functools import reduce
 import matplotlib.pyplot as plt
+plt.switch_backend('agg')
+
 
 
 class GAforXOR(object):
