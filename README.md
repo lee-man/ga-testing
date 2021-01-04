@@ -8,6 +8,9 @@ The codes are referred from [jiecaoyu/XNOR-Net-PyTorch](https://github.com/jieca
 ## Comparasion BNN with EDT
 * From high-level pespective, they are the same, as BNN can be seem as a stacted XOR Net structure where its parameters should be learned from data.
 * 1-layer decoder of BNN is exactly a XOR network.
+  
+## GA for EDT structure search
+* Using GA to search an optimal XOR matrix for EDT, which are more effective than random XOR matrix.
 
 
 

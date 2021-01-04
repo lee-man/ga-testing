@@ -105,6 +105,9 @@ def create_mlb_stochastic(num_id=415, num_data=40000, specified_percentage=0.1, 
      # normalize
     sc_counts += 1 # add 1 to avoid zero case.
     sc_counts /= sc_counts.sum()
+    print(np.shape(sc_counts))
+    np.save('data/freq_sc.npy', sc_counts)
+    # exit()
 
     data = np.zeros((num_data, num_id))
     for (i, row) in enumerate(data):

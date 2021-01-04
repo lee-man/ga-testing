@@ -14,9 +14,12 @@ class GAforXOR(object):
     '''
     Fitnesss: Encoding Scucess Rate
     Secondary Metric: Activated Scan Chain Rate
+    40=>415
+    40=>830=>415
+    B in 830x450 matrix, each row 2 ones.
     '''
 
-    def __init__(self, num_sc=415, num_ctrl=40, num_generation=20, num_pop=20, num_parent=10, num_crossover=10, num_mutation=5, mutation_rate=0.1, connection_percentage=0.2, freq_sc_file='data/freq_sc.npy', specified_percentage=0.1, num_test=100):
+    def __init__(self, num_sc=415, num_ctrl=40, num_generation=100, num_pop=20, num_parent=5, num_crossover=15, num_mutation=5, mutation_rate=0.05, connection_percentage=0.2, freq_sc_file='data/freq_sc.npy', specified_percentage=0.1, num_test=100):
         self.num_sc = num_sc
         self.num_ctrl = num_ctrl
         self.num_generation = num_generation
