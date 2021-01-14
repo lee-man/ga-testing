@@ -20,7 +20,7 @@ class GAforXOR(object):
     So far, we do the GA for matrix A, and keep matrix P as the same as EDT.
     Args: 
         num_sc: The number of scan chain to be encoded;
-        num_ctrl: The number of encoding bits;
+        num_ctrl: The number of encoding bits; This parameter should be set close to (num_sc * specified percentage).
         num_generation: The number of generation to be evolved.
         num_pop: The number of instances, in other words, how many A's and P's.
         num_parent: The number of parents selected to mate, in other words, select top-N instances in the population;
