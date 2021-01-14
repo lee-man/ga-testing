@@ -34,7 +34,7 @@ class GAforXOR(object):
         num_test: The number of test data to be generated. Out of concern of cost, we use a smaller number of test data.
     '''
 
-    def __init__(self, num_sc=415, num_ctrl=40, num_generation=100, num_pop=20, num_parent=5, num_crossover=15, num_mutation=5, mutation_rate=0.05, connection_percentage=0.2, power_lit=1, freq_sc_file='data/freq_sc.npy', specified_percentage=0.1, num_test=100):
+    def __init__(self, num_sc=415, num_ctrl=40, num_generation=40, num_pop=20, num_parent=5, num_crossover=15, num_mutation=5, mutation_rate=0.05, connection_percentage=0.2, power_lit=1, freq_sc_file='data/freq_sc.npy', specified_percentage=0.1, num_test=100):
         self.num_sc = num_sc
         self.num_ctrl = num_ctrl
         self.num_generation = num_generation
@@ -175,7 +175,7 @@ class GAforXOR(object):
     
     def save_xor(self):
         # save the xor network and and net
-        best_idx = np.argmax(self.fitness_history[-1])
+        best_idx = np.argmax(self.fitness_history[self.num_generation-1])
         np.save('checkpoint/GA_XOR_best.npy', self.pop[0][best_idx])
         np.save('checkpoint/GA_AND_best.npy', self.pop[1][best_idx])
         
