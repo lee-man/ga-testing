@@ -12,6 +12,7 @@ class XORSolver(object):
         self.b = b
         self.x = None
         self.status = None
+        assert np.shape(A)[0] == np.shape(b)[0], 'The size of A and b is inconsistent.'
 
     def find_free_variables(self):
         free_idx = None
