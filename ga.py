@@ -28,7 +28,7 @@ class GAforXOR(object):
         num_mutation: The number of children to do mutation;
         mutation_rate: The rate of mutation;
         connection_rate: The initial connection configuration of matrix A. E.g., 0.2, then 20% of A being 1's, other elements being 0's;
-        power limit: The initial configuration of matrix B. E.g., 2, then each row of matrix has 2 1's, meaning that the average activating rate of scan chain is 25%.
+        power_limit: The initial configuration of matrix P. E.g., 2, then each row of matrix has 2 1's, meaning that the average activating rate of scan chain is 25%.
         freq_sc_file: The frequency statistic of scan chain. We use it to generate test data;
         specified_percentage: The specified scan chain rate when generating test data;
         num_test: The number of test data to be generated. Out of concern of cost, we use a smaller number of test data.
