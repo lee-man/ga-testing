@@ -180,17 +180,17 @@ class GAforXOR(object):
             axs[0,].plot([key] * len(values), values, '.', color='k')
             axs[0].plot(key, np.max(values), '*', color='r')
             axs[0].plot(key, np.average(values), 'o', color='b')
-        axs[0].set(xlabel='# Generation', ylabel='Fitness function (%.2f)' % self.beta)
+        axs[0].set(ylabel='Fitness(%.1f)' % self.beta)
         for (key, values) in self.encode_history.items():
             axs[1].plot([key] * len(values), values, '.', color='k')
             axs[1].plot(key, np.max(values), '*', color='r')
             axs[1].plot(key, np.average(values), 'o', color='b')
-        axs[1].set(xlabel='# Generation', ylabel='Encoding Success Rate')
+        axs[1].set(ylabel='ESR')
         for (key, values) in self.act_history.items():
             axs[2].plot([key] * len(values), values, '.', color='k')
-            axs[2].plot(key, np.max(values), '*', color='r')
+            axs[2].plot(key, np.min(values), '*', color='r')
             axs[2].plot(key, np.average(values), 'o', color='b')
-        axs[2].set(xlabel='# Generation', ylabel='Activated Percentage')
+        axs[2].set(xlabel='# Generation', ylabel='AP')
 
         plt.title('GA for Testing')
         plt.savefig('figs/GA_fitness.pdf')
