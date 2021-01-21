@@ -13,7 +13,7 @@ plt.switch_backend('agg')
 class GAforXOR(object):
     '''
     Fitnesss: Encoding Scucess Rate
-    Secondary Metric: Activated Scan Chain Rate
+    Secondary Metric: Activated Scan Chain Rate.
 
     Every instances: matrix A, and matrix P;
     Matrix A refers to XORNet, matrix P refers to ANDNet;
@@ -32,6 +32,13 @@ class GAforXOR(object):
         freq_sc_file: The frequency statistic of scan chain. We use it to generate test data;
         specified_percentage: The specified scan chain rate when generating test data;
         num_test: The number of test data to be generated. Out of concern of cost, we use a smaller number of test data.
+
+    Another idea:
+        X in b[10000, 415]    B in b[10000, 40]   A in b[40 * 415].
+        minimize |X - BA|. Just like matrix factorization.
+    Another idea:
+        Graph based approcah. Analyize the joint distribution of scan chains... 
+
     '''
 
     def __init__(self, num_sc=415, num_ctrl=40, num_generation=40, num_pop=20, num_parent=5, num_crossover=15, num_mutation=5, mutation_rate=0.05, connection_percentage=0.2, power_lit=1, freq_sc_file='data/freq_sc.npy', specified_percentage=0.1, num_test=100, beta=0.5):
