@@ -41,7 +41,7 @@ class GAforXOR(object):
 
     '''
 
-    def __init__(self, num_sc=415, num_ctrl=40, num_generation=40, num_pop=20, num_parent=5, num_crossover=15, num_mutation=5, mutation_rate=0.05, connection_percentage=0.2, power_lit=1, freq_sc_file='data/freq_sc.npy', specified_percentage=0.1, num_test=100, beta=0.5):
+    def __init__(self, num_sc=415, num_ctrl=40, num_generation=40, num_pop=20, num_parent=5, num_crossover=15, num_mutation=5, mutation_rate=0.05, connection_percentage=0.2, power_lit=1, freq_sc_file='data/freq_sc.npy', specified_percentage=0.1, num_test=100, beta=0.7):
         self.num_sc = num_sc
         self.num_ctrl = num_ctrl
         self.num_generation = num_generation
@@ -192,8 +192,8 @@ class GAforXOR(object):
             axs[2].plot(key, np.average(values), 'o', color='b')
         axs[2].set(xlabel='# Generation', ylabel='AP')
 
-        plt.title('GA for Testing')
-        plt.savefig('figs/GA_fitness.pdf')
+        # plt.title('GA for Testing')
+        plt.savefig('figs/GA_fitness_%.1f.pdf' % self.beta)
 
     
     def save_xor(self):
