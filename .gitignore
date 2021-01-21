@@ -10,3 +10,6 @@ models/__pycache__/ae.cpython-37.pyc
 __pycache__
 .DS_Store
 data/.DS_Store
+
+*.DS_Store
+.DS_Store

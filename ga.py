@@ -34,7 +34,7 @@ class GAforXOR(object):
         num_test: The number of test data to be generated. Out of concern of cost, we use a smaller number of test data.
     '''
 
-    def __init__(self, num_sc=415, num_ctrl=40, num_generation=40, num_pop=20, num_parent=5, num_crossover=15, num_mutation=5, mutation_rate=0.05, connection_percentage=0.2, power_lit=1, freq_sc_file='data/freq_sc.npy', specified_percentage=0.1, num_test=100):
+    def __init__(self, num_sc=415, num_ctrl=40, num_generation=40, num_pop=20, num_parent=5, num_crossover=15, num_mutation=5, mutation_rate=0.05, connection_percentage=0.2, power_lit=1, freq_sc_file='data/freq_sc.npy', specified_percentage=0.1, num_test=100, beta=0.5):
         self.num_sc = num_sc
         self.num_ctrl = num_ctrl
         self.num_generation = num_generation
@@ -51,7 +51,9 @@ class GAforXOR(object):
         self.pop = self.initialize_pop()   # contains (pop_A, pop_P)
         self.generation_idx = 0
         self.fitness_history = {}
+        self.encode_history = {}
         self.act_history = {}
+        self.beta = beta # The coefficient for fitness function
 
 
         
@@ -75,13 +77,17 @@ class GAforXOR(object):
 
     def cal_pop_fitness(self):
         fitness_pop = []
+        encode_pop = []
         act_pop = []
         for i in range(self.num_pop):
-            fitness_i, act_i = self.xor_solving(i)
+            encode_success_i, act_i = self.xor_solving(i)
+            fitness_i = encode_success_i - self.beta * act_i  # maximize encoding success rate and minimize the activated percentage.
             fitness_pop.append(fitness_i)
+            encode_pop.append(encode_success_i)
             act_pop.append(act_i)
             # print('A index:', i)
         self.fitness_history[self.generation_idx] = fitness_pop
+        self.encode_history[self.generation_idx] = encode_pop
         self.act_history[self.generation_idx] = act_pop
         # self.generation_idx += 1
 
@@ -162,13 +168,23 @@ class GAforXOR(object):
             print('average: ', i, ':', np.average(self.fitness_history[i]))
     
     def visulization(self):
-        fig, ax = plt.subplots(1, 1)
+        fig, axs = plt.subplots(3)
         for (key, values) in self.fitness_history.items():
-            ax.plot([key] * len(values), values, '.', color='k')
-            ax.plot(key, np.max(values), '*', color='r')
-            ax.plot(key, np.average(values), 'o', color='b')
-        plt.xlabel('# Generation')
-        plt.ylabel('Encoding rate')
+            axs[0,].plot([key] * len(values), values, '.', color='k')
+            axs[0].plot(key, np.max(values), '*', color='r')
+            axs[0].plot(key, np.average(values), 'o', color='b')
+        axs[0].set(xlabel='# Generation', ylabel='Fitness function (%.2f)' % self.beta)
+        for (key, values) in self.encode_history.items():
+            axs[1].plot([key] * len(values), values, '.', color='k')
+            axs[1].plot(key, np.max(values), '*', color='r')
+            axs[1].plot(key, np.average(values), 'o', color='b')
+        axs[1].set(xlabel='# Generation', ylabel='Encoding Success Rate')
+        for (key, values) in self.act_history.items():
+            axs[2].plot([key] * len(values), values, '.', color='k')
+            axs[2].plot(key, np.max(values), '*', color='r')
+            axs[2].plot(key, np.average(values), 'o', color='b')
+        axs[2].set(xlabel='# Generation', ylabel='Activated Percentage')
+
         plt.title('GA for Testing')
         plt.savefig('figs/GA_fitness.pdf')
 
