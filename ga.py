@@ -207,7 +207,7 @@ class GAforXOR(object):
     
     def save_xor_original(self):
         # randomn save the original xor network from 1st generation
-        select_idx = random.randint(0, self.num_generation-1)
+        select_idx = random.randint(0, self.num_pop-1)
         np.save('checkpoint/GA_XOR_orig.npy', self.pop[0][select_idx])
         np.save('checkpoint/GA_XOR_orig.npy', self.pop[1][select_idx])
 
