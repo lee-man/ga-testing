@@ -3,6 +3,7 @@ Author: LI Min
 '''
 
 import numpy as np
+import random
 from xor_solver import XORSolver
 from functools import reduce
 import matplotlib.pyplot as plt
@@ -41,7 +42,7 @@ class GAforXOR(object):
 
     '''
 
-    def __init__(self, num_sc=415, num_ctrl=40, num_generation=40, num_pop=20, num_parent=5, num_crossover=15, num_mutation=5, mutation_rate=0.05, connection_percentage=0.2, power_lit=1, freq_sc_file='data/freq_sc.npy', specified_percentage=0.1, num_test=100, beta=0.7):
+    def __init__(self, num_sc=415, num_ctrl=40, num_generation=40, num_pop=20, num_parent=5, num_crossover=15, num_mutation=5, mutation_rate=0.05, connection_percentage=0.2, power_lit=1, freq_sc_file='data/freq_sc.npy', specified_percentage=0.1, num_test=100, beta=0.0):
         self.num_sc = num_sc
         self.num_ctrl = num_ctrl
         self.num_generation = num_generation
@@ -56,6 +57,8 @@ class GAforXOR(object):
         self.freq_sc = np.load(freq_sc_file)
         self.test_data = self.initialize_testdata(specified_percentage, num_test)
         self.pop = self.initialize_pop()   # contains (pop_A, pop_P)
+        # save a random xor matrix
+        self.save_xor_original()
         self.generation_idx = 0
         self.fitness_history = {}
         self.encode_history = {}
@@ -201,6 +204,13 @@ class GAforXOR(object):
         best_idx = np.argmax(self.fitness_history[self.num_generation-1])
         np.save('checkpoint/GA_XOR_best.npy', self.pop[0][best_idx])
         np.save('checkpoint/GA_AND_best.npy', self.pop[1][best_idx])
+    
+    def save_xor_original(self):
+        # randomn save the original xor network from 1st generation
+        select_idx = random.randint(0, self.num_generation-1)
+        np.save('checkpoint/GA_XOR_orig.npy', self.pop[0][select_idx])
+        np.save('checkpoint/GA_XOR_orig.npy', self.pop[1][select_idx])
+
         
 
 
