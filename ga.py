@@ -63,16 +63,18 @@ class GAforXOR(object):
         self.fitness_history = {}
         self.encode_history = {}
         self.act_history = {}
+        self.uns_history = {}
         self.beta = beta # The coefficient for fitness function
 
 
         
 
     def initialize_testdata(self, specified_percentage, num_test):
-        test_data = np.zeros((num_test, self.num_sc))
-        for (i, row) in enumerate(test_data):
-            generate_row = np.random.choice(self.num_sc, size=int(self.num_sc *  specified_percentage), replace=False, p=self.freq_sc)
-            test_data[i][generate_row] = 1
+        # test_data = np.zeros((num_test, self.num_sc))
+        # for (i, row) in enumerate(test_data):
+        #     generate_row = np.random.choice(self.num_sc, size=int(self.num_sc *  specified_percentage), replace=False, p=self.freq_sc)
+        #     test_data[i][generate_row] = 1
+        test_data = np.load('data/mlb_sc.npy')
         test_data = test_data.astype(dtype=bool)
         return test_data
 
@@ -89,16 +91,21 @@ class GAforXOR(object):
         fitness_pop = []
         encode_pop = []
         act_pop = []
+        uns_pop = []
         for i in range(self.num_pop):
             encode_success_i, act_i = self.xor_solving(i)
-            fitness_i = encode_success_i - self.beta * act_i  # maximize encoding success rate and minimize the activated percentage.
+            uns_i = np.shape(self.test_data)[0] - int(encode_success_i * (np.shape(self.test_data)[0] + 1))
+            # fitness_i = encode_success_i - self.beta * act_i  # maximize encoding success rate and minimize the activated percentage.
+            fitness_i = - int(uns_i)
             fitness_pop.append(fitness_i)
             encode_pop.append(encode_success_i)
             act_pop.append(act_i)
+            uns_pop.append(uns_i)
             # print('A index:', i)
         self.fitness_history[self.generation_idx] = fitness_pop
         self.encode_history[self.generation_idx] = encode_pop
         self.act_history[self.generation_idx] = act_pop
+        self.uns_history[self.generation_idx] = uns_pop
         # self.generation_idx += 1
 
     def xor_solving(self, i):
@@ -178,25 +185,31 @@ class GAforXOR(object):
             print('average: ', i, ':', np.average(self.fitness_history[i]))
     
     def visulization(self):
-        fig, axs = plt.subplots(3)
-        for (key, values) in self.fitness_history.items():
-            axs[0,].plot([key] * len(values), values, '.', color='k')
-            axs[0].plot(key, np.max(values), '*', color='r')
-            axs[0].plot(key, np.average(values), 'o', color='b')
-        axs[0].set(ylabel='Fitness(%.1f)' % self.beta)
-        for (key, values) in self.encode_history.items():
-            axs[1].plot([key] * len(values), values, '.', color='k')
-            axs[1].plot(key, np.max(values), '*', color='r')
-            axs[1].plot(key, np.average(values), 'o', color='b')
-        axs[1].set(ylabel='ESR')
-        for (key, values) in self.act_history.items():
-            axs[2].plot([key] * len(values), values, '.', color='k')
-            axs[2].plot(key, np.min(values), '*', color='r')
-            axs[2].plot(key, np.average(values), 'o', color='b')
-        axs[2].set(xlabel='# Generation', ylabel='AP')
+        # fig, axs = plt.subplots(3)
+        # for (key, values) in self.fitness_history.items():
+        #     axs[0,].plot([key] * len(values), values, '.', color='k')
+        #     axs[0].plot(key, np.max(values), '*', color='r')
+        #     axs[0].plot(key, np.average(values), 'o', color='b')
+        # axs[0].set(ylabel='Fitness(%.1f)' % self.beta)
+        # for (key, values) in self.encode_history.items():
+        #     axs[1].plot([key] * len(values), values, '.', color='k')
+        #     axs[1].plot(key, np.max(values), '*', color='r')
+        #     axs[1].plot(key, np.average(values), 'o', color='b')
+        # axs[1].set(ylabel='ESR')
+        # for (key, values) in self.act_history.items():
+        #     axs[2].plot([key] * len(values), values, '.', color='k')
+        #     axs[2].plot(key, np.min(values), '*', color='r')
+        #     axs[2].plot(key, np.average(values), 'o', color='b')
+        # axs[2].set(xlabel='# Generation', ylabel='AP')
+        fig, ax = plt.subplots()
+        for (key, values) in self.uns_history.items():
+            ax.plot([key] * len(values), values, '.', color='k')
+            ax.plot(key, np.max(values), '*', color='r')
+            ax.plot(key, np.average(values), 'o', color='b')
+        ax.set(ylabel='UNS')
 
         # plt.title('GA for Testing')
-        plt.savefig('figs/GA_fitness_%.1f.pdf' % self.beta)
+        plt.savefig('figs/GA_uns.pdf')
 
     
     def save_xor(self):

@@ -87,6 +87,12 @@ def create_mlb_stochastic(num_id=415, num_data=40000, specified_percentage=0.1, 
     mlb = np.load('data/mlb_cell.npy')
     mlb = (np.abs(mlb).sum(axis=2) != 0).astype(float)
 
+    mlb = mlb[:3000] # sample 3000 test cubes
+    print(np.shape(mlb))
+    np.save('data/mlb_sc.npy', mlb)
+    exit()
+
+
     sc_counts = np.zeros(num_id)
     for row in mlb:
         for (eid, element) in enumerate(row):
@@ -116,7 +122,7 @@ def create_mlb_stochastic(num_id=415, num_data=40000, specified_percentage=0.1, 
     
     np.save('data/data_stochasitc.npy', data)
 
-# create_mlb_stochastic()
+create_mlb_stochastic()
 # exit()
 
 
