@@ -42,7 +42,7 @@ class GAforXOR(object):
 
     '''
 
-    def __init__(self, num_sc=415, num_ctrl=40, num_generation=40, num_pop=20, num_parent=5, num_crossover=15, num_mutation=5, mutation_rate=0.05, connection_percentage=0.2, power_lit=1, freq_sc_file='data/freq_sc.npy', specified_percentage=0.1, num_test=100, beta=0.0):
+    def __init__(self, num_sc=415, num_ctrl=40, num_generation=40, num_pop=20, num_parent=5, num_crossover=15, num_mutation=5, mutation_rate=0.05, connection_percentage=0.2, power_lit=1, freq_sc_file='data/freq_sc.npy', specified_percentage=0.1, num_test=100, beta=0.0, power_uppper=0.5):
         self.num_sc = num_sc
         self.num_ctrl = num_ctrl
         self.num_generation = num_generation
@@ -65,6 +65,7 @@ class GAforXOR(object):
         self.act_history = {}
         self.uns_history = {}
         self.beta = beta # The coefficient for fitness function
+        self.power_upper = power_uppper
 
 
         
@@ -93,8 +94,8 @@ class GAforXOR(object):
         act_pop = []
         uns_pop = []
         for i in range(self.num_pop):
-            encode_success_i, act_i = self.xor_solving(i)
-            uns_i = np.shape(self.test_data)[0] - int(encode_success_i * (np.shape(self.test_data)[0] + 1))
+            encode_success_i, act_i, violate_power = self.xor_solving(i)
+            uns_i = np.shape(self.test_data)[0] - int(encode_success_i * (np.shape(self.test_data)[0] + 1)) + violate_power
             # fitness_i = encode_success_i - self.beta * act_i  # maximize encoding success rate and minimize the activated percentage.
             fitness_i = - int(uns_i)
             fitness_pop.append(fitness_i)
@@ -115,6 +116,7 @@ class GAforXOR(object):
         encoded_count = 0.0
         total = 0.0
         activated_rate_acculmulate = 0.0
+        violate_power = 0
         for (i, cube) in enumerate(self.test_data):
             total += 1
             P_hat = P[cube.astype(dtype=bool)]
@@ -125,8 +127,12 @@ class GAforXOR(object):
             equation.gaussian_elimination()
             if equation.status:
                 encoded_count += 1
-                activated_rate_acculmulate += self.calculate_activated_rate(A, equation.x)
-        return encoded_count/(total + 1.0), activated_rate_acculmulate/(encoded_count + 1.0)
+                activated_rate = self.calculate_activated_rate(A, equation.x)
+                activated_rate_acculmulate += activated_rate
+                if activated_rate >= self.power_limit:
+                    violate_power += 1
+                
+        return encoded_count/(total + 1.0), activated_rate_acculmulate/(encoded_count + 1.0), violate_power
 
     def calculate_activated_rate(self, A, x):
         b = np.zeros(np.shape(A)[0]).astype(dtype=bool)
