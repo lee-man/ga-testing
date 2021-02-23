@@ -42,7 +42,7 @@ class GAforXOR(object):
 
     '''
 
-    def __init__(self, num_sc=415, num_ctrl=40, num_generation=40, num_pop=20, num_parent=5, num_crossover=15, num_mutation=5, mutation_rate=0.05, connection_percentage=0.2, power_lit=1, freq_sc_file='data/freq_sc.npy', specified_percentage=0.1, num_test=100, beta=0.0, power_uppper=0.5):
+    def __init__(self, num_sc=415, num_ctrl=25, num_generation=10, num_pop=20, num_parent=5, num_crossover=15, num_mutation=5, mutation_rate=0.05, connection_percentage=0.2, power_lit=1, freq_sc_file='data/freq_sc.npy', specified_percentage=0.1, num_test=100, beta=0.0, power_uppper=0.5):
         self.num_sc = num_sc
         self.num_ctrl = num_ctrl
         self.num_generation = num_generation
@@ -81,6 +81,15 @@ class GAforXOR(object):
 
     def initialize_pop(self):
         pop_A = np.random.choice(2, size=(self.num_pop, self.num_sc * self.power_limit, self.num_ctrl), p=[1-self.connection_percentage, self.connection_percentage]).astype(dtype=bool)
+        # Another way to generate population
+        pop_A = np.zeros((self.num_pop, self.num_sc * self.power_limit, self.num_ctrl))
+        for i_p in range(np.shape(pop_A)[0]):
+            for i_r in range(np.shape(pop_A)[1]):
+                k_base = 2 if random.random() < 0.7 else 3
+                k = k_base + np.random.geometric(0.4)
+                idx = np.random.choice(self.num_ctrl, size=k, replace=False)
+                np.put(pop_A[i_p][i_r], idx, 1)
+                
         pop_P = np.zeros((self.num_sc, self.num_sc * self.power_limit))
         for (i, row) in enumerate(pop_P):
             row[(i*self.power_limit):(i*self.power_limit+self.power_limit)] = 1
