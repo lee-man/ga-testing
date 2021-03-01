@@ -12,6 +12,9 @@ The codes are referred from [jiecaoyu/XNOR-Net-PyTorch](https://github.com/jieca
 ## GA for EDT structure search
 * Using GA to search an optimal XOR matrix for EDT, which are more effective than random XOR matrix.
 
+### Consider the initialization of XORNet
+How to initialize the XORNet is important. Usually, we need the matrix to be orthogonal. And we might refer to this [Xavier Initialization paper](http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf).
+
 
 
 
