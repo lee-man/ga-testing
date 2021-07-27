@@ -1,3 +1,5 @@
+# Testability-Aware Low Power Controller Design with Evolutionary Learning
+This repo contains the source code of Testability-Aware Low Power Controller Design with Evolutionary Learning, ITC 2021.
 # BNN-Testing
 Created on 6/11/2020. The repo has been updated again on 4/09/2020.
 Try BNN for lossless testing compression.
